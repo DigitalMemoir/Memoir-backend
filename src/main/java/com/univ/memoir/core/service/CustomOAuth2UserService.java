@@ -1,5 +1,6 @@
 package com.univ.memoir.core.service;
 
+import com.univ.memoir.api.exception.codes.ErrorCode;
 import com.univ.memoir.config.jwt.CustomOAuth2User;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.UserRepository;
@@ -20,16 +21,30 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = new DefaultOAuth2UserService().loadUser(userRequest);
-        String email = oAuth2User.getAttribute("email");
 
-        User user = userRepository.findByEmail(email)
+        String googleId = oAuth2User.getAttribute("sub");
+        String email = oAuth2User.getAttribute("email");
+        String name = oAuth2User.getAttribute("name");
+        String picture = oAuth2User.getAttribute("picture");
+
+        if (googleId == null) {
+            throw new OAuth2AuthenticationException("Google 계정 정보를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        }
+
+        User user = userRepository.findByGoogleId(googleId)
+                .map(existingUser -> {
+                    // 기존 사용자 정보 업데이트 가능
+                    existingUser.updateName(name);
+                    existingUser.updateProfileUrl(picture);
+                    return userRepository.save(existingUser);
+                })
                 .orElseGet(() -> userRepository.save(User.builder()
+                        .googleId(googleId)
                         .email(email)
-                        .name(oAuth2User.getAttribute("name"))
-                        .profileUrl(oAuth2User.getAttribute("picture"))
+                        .name(name)
+                        .profileUrl(picture)
                         .build()));
 
         return new CustomOAuth2User(user, oAuth2User.getAttributes());
     }
 }
-
