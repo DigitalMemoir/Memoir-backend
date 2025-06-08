@@ -4,6 +4,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -15,8 +16,10 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
+    @Value("${oauth2.redirect-uri}")
+    private String redirectUri;
+
     private final JwtProvider jwtProvider;
-    private static final String REDIRECT_URI = "http://localhost:3000/oauth/callback"; // 프론트 콜백 주소
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -24,7 +27,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         // AccessToken 생성
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
         String email = oAuth2User.getAttribute("email");
-        String accessToken = jwtProvider.createToken(email);
+        String accessToken = jwtProvider.createAccessToken(email);
 
 
         // AccessToken을 HttpOnly 쿠키로 설정
@@ -37,6 +40,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         response.addCookie(accessTokenCookie);
 
         // 프론트로 리디렉트
-        response.sendRedirect(REDIRECT_URI);
+        response.sendRedirect(redirectUri);
     }
 }
