@@ -10,6 +10,7 @@ import java.util.Set;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
+@Table(name = "user")
 public class User {
 
     @Id
@@ -34,13 +35,11 @@ public class User {
     @Column(length = 1, nullable = false)
     private String status = "N"; // 'N' = 정상 / 'Y' = 탈퇴
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "user_interest",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "interest_id")
-    )
-    private Set<Interest> interests = new HashSet<>();
+    @ElementCollection(targetClass = InterestType.class, fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_interests", joinColumns = @JoinColumn(name = "user_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "interest")
+    private Set<InterestType> interests = new HashSet<>();
 
     @Builder
     public User(String googleId, String email, String name, String profileUrl, String refreshToken) {
@@ -73,12 +72,10 @@ public class User {
         return "N".equals(this.status);
     }
 
-    public void addInterest(Interest interest) {
-        this.interests.add(interest);
+    public void updateInterests(Set<InterestType> newInterests) {
+        this.interests.clear();
+        this.interests.addAll(newInterests);
     }
 
-    public void removeInterest(Interest interest) {
-        this.interests.remove(interest);
-    }
 
 }
