@@ -13,6 +13,9 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
@@ -30,14 +33,15 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         String picture = oAuth2User.getAttribute("picture");
 
         if (googleId == null) {
-            throw new OAuth2AuthenticationException("Google 계정 정보를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+            throw new OAuth2AuthenticationException("Google 계정 정보를 가져오지 못했습니다.");
         }
+
+        boolean isNewUser = !userRepository.existsByGoogleId(googleId);
 
         String refreshToken = jwtProvider.createRefreshToken(email);
 
         User user = userRepository.findByGoogleId(googleId)
                 .map(existingUser -> {
-                    // 기존 사용자 정보 업데이트 가능
                     existingUser.updateName(name);
                     existingUser.updateProfileUrl(picture);
                     existingUser.updateRefreshToken(refreshToken);
@@ -51,6 +55,11 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                         .refreshToken(refreshToken)
                         .build()));
 
-        return new CustomOAuth2User(user, oAuth2User.getAttributes());
+        // OAuth2User에 신규회원 여부를 심어줌
+        Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
+        attributes.put("isNewUser", isNewUser);
+
+        return new CustomOAuth2User(user, attributes);
     }
+
 }
