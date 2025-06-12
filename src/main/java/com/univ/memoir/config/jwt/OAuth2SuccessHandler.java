@@ -17,29 +17,35 @@ import java.io.IOException;
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     @Value("${oauth2.redirect-uri}")
-    private String redirectUri;
+    private String defaultRedirectUri;
+
+    @Value("${oauth2.redirect-uri.onboarding}")
+    private String onboardingRedirectUri;
 
     private final JwtProvider jwtProvider;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                         Authentication authentication) throws IOException {
-        // AccessToken 생성
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
         String email = oAuth2User.getAttribute("email");
         String accessToken = jwtProvider.createAccessToken(email);
 
-
-        // AccessToken을 HttpOnly 쿠키로 설정
         Cookie accessTokenCookie = new Cookie("accessToken", accessToken);
-        accessTokenCookie.setHttpOnly(true); // JavaScript에서 접근 불가
-        accessTokenCookie.setSecure(false);  // 개발 단계에서는 false
+        accessTokenCookie.setHttpOnly(true);
+        accessTokenCookie.setSecure(false);
         accessTokenCookie.setPath("/");
-        accessTokenCookie.setMaxAge(30 * 60); // 30분
-
+        accessTokenCookie.setMaxAge(30 * 60);
         response.addCookie(accessTokenCookie);
 
-        // 프론트로 리디렉트
-        response.sendRedirect(redirectUri);
+        // 안전한 신규회원 여부 판별
+        Boolean isNewUserAttr = oAuth2User.getAttribute("isNewUser");
+        boolean isNewUser = Boolean.TRUE.equals(isNewUserAttr);
+
+        if (isNewUser) {
+            response.sendRedirect(onboardingRedirectUri);
+        } else {
+            response.sendRedirect(defaultRedirectUri);
+        }
     }
 }
