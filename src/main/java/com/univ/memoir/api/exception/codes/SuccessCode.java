@@ -20,6 +20,7 @@ public enum SuccessCode {
     USER_CREATED(HttpStatus.CREATED, "회원 등록에 성공했습니다."),
     UPDATED(HttpStatus.CREATED, "업데이트 요청이 성공했습니다."),
     KEYWORD_EXTRACTION_SUCCESS(HttpStatus.CREATED, "키워드 추출에 성공했습니다."),
+    TIME_ANALYSIS_SUCCESS(HttpStatus.CREATED, "사용 시간 분석에 성공했습니다."),
 
     /**
      * 202 ACCEPTED
