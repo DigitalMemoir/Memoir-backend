@@ -117,10 +117,7 @@ public class TimeService {
                 }
                 """;
 
-        return String.format(
-                template,
-                request.getDate(),
-                objectMapper.writeValueAsString(Map.of("visitedPages", request.getVisitedPages()))
-        );
+        String json = objectMapper.writeValueAsString(Map.of("visitedPages", request.getVisitedPages()));
+        return String.format(template, request.getDate()) + "\n" + json;
     }
 }
