@@ -19,19 +19,27 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Service
 public class TimeService {
+    // 로그 출력을 위한 Logger
     private static final Logger log = LoggerFactory.getLogger(TimeService.class);
+
+    // OpenAI API에 사용할 모델과 URI 상수
     private static final String OPENAI_MODEL = "gpt-3.5-turbo";
     private static final String OPENAI_URI = "/chat/completions";
 
+    // 의존성 주입
     private final WebClient openAiWebClient;
     private final ObjectMapper objectMapper;
 
+    /**
+     * 사용자의 방문 기록을 기반으로 GPT에게 사용 시간 분석 요청을 보내고 결과를 반환
+     */
     public Mono<Map> analyzeTimeStats(String accessToken, TimeAnalysisRequest request) {
         List<VisitedPageForTimeDto> visitedPages = request.getVisitedPages();
         if (visitedPages == null || visitedPages.isEmpty()) {
             return Mono.just(Map.of("code", 400, "msg", "방문 기록이 없습니다."));
         }
 
+        // GPT 프롬프트 생성
         String prompt;
         try {
             prompt = createPrompt(request);
@@ -40,6 +48,7 @@ public class TimeService {
             return Mono.just(Map.of("code", 500, "msg", "프롬프트 생성 실패"));
         }
 
+        // OpenAI API에 요청할 body 구성
         Map<String, Object> body = Map.of(
                 "model", OPENAI_MODEL,
                 "messages", List.of(
@@ -49,6 +58,7 @@ public class TimeService {
                 "temperature", 0.3
         );
 
+        // WebClient를 통해 GPT 호출
         return openAiWebClient.post()
                 .uri(OPENAI_URI)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -58,10 +68,17 @@ public class TimeService {
                 .map(response -> {
                     try {
                         List<?> choices = (List<?>) response.get("choices");
+                        if (choices == null || choices.isEmpty()) {
+                            log.warn("GPT 응답에 choices가 없습니다.");
+                            return Map.of("code", 500, "msg", "GPT 응답에 choices가 없습니다.");
+                        }
+
+                        // 첫 번째 choice에서 message content 추출
                         Map<String, Object> choice = (Map<String, Object>) choices.get(0);
                         Map<String, Object> message = (Map<String, Object>) choice.get("message");
                         String content = Objects.toString(message.get("content"), "");
 
+                        // content는 JSON 문자열이므로 Map으로 파싱 후 반환
                         return objectMapper.readValue(content, Map.class);
                     } catch (Exception e) {
                         log.error("GPT 응답 파싱 실패", e);
@@ -74,6 +91,9 @@ public class TimeService {
                 });
     }
 
+    /**
+     * 사용자의 방문 기록을 기반으로 GPT 프롬프트 문자열 생성
+     */
     private String createPrompt(TimeAnalysisRequest request) throws JsonProcessingException {
         String template = """
                 아래는 사용자가 %s 하루 동안 방문한 웹 페이지 기록입니다.
@@ -117,7 +137,10 @@ public class TimeService {
                 }
                 """;
 
+        // 방문 기록을 JSON 문자열로 변환
         String json = objectMapper.writeValueAsString(Map.of("visitedPages", request.getVisitedPages()));
+
+        // 템플릿에 날짜 삽입 후, JSON 데이터를 이어붙여 최종 프롬프트 구성
         return String.format(template, request.getDate()) + "\n" + json;
     }
 }
