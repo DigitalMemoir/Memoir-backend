@@ -32,16 +32,20 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults()) // CORS 설정 활성화
                 .csrf(AbstractHttpConfigurer::disable)
 
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/**").permitAll()  // API 요청 열기 (이후 JWT 필터 적용)
+                        .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated()
                 )
 
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
+                        .failureHandler((request, response, exception) -> {
+                            response.sendRedirect("/login?error");
+                        })
                 );
 
         return http.build();
