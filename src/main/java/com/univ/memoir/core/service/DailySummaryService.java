@@ -4,6 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.univ.memoir.api.dto.req.time.TimeAnalysisRequest;
 import com.univ.memoir.api.dto.req.time.VisitedPageForTimeDto;
+import com.univ.memoir.core.domain.DailySummary;
+import com.univ.memoir.core.repository.DailySummaryRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -21,6 +25,7 @@ public class DailySummaryService {
 
 	private final WebClient openAiWebClient;
 	private final ObjectMapper objectMapper;
+	private final DailySummaryRepository dailySummaryRepository;
 
 	private static final String OPENAI_MODEL = "gpt-3.5-turbo";
 	private static final String OPENAI_URI = "/chat/completions";
@@ -31,27 +36,42 @@ public class DailySummaryService {
 			return Mono.error(new IllegalArgumentException("방문 기록이 없습니다."));
 		}
 
+		LocalDate localDate = LocalDate.parse(request.getDate()); // "yyyy-MM-dd"
+
 		return fetchCategoriesFromGPT(pages)
 			.flatMap(categorizedPages -> {
 				DailyActivityStats stats = calculateStats(categorizedPages);
 				return fetchDailySummaryFromGPT(request.getDate(), categorizedPages)
-					.map(gptSummary -> new DailySummaryResult(
-						request.getDate(),
-						gptSummary.topKeywords,
-						gptSummary.dailyTimeline,
-						gptSummary.summaryText,
-						new DailySummaryResult.ActivityStats(
-							stats.totalUsageMinutes,
-							stats.getCategoryPercentages()
-						)
-					));
-			})
-			.onErrorResume(e -> {
-				log.error("일일 요약 생성 실패", e);
-				return Mono.error(new RuntimeException("서버 오류: " + e.getMessage(), e));
+					.map(gptSummary -> {
+						DailySummaryResult result = new DailySummaryResult(
+							request.getDate(),
+							gptSummary.topKeywords,
+							gptSummary.dailyTimeline,
+							gptSummary.summaryText,
+							new DailySummaryResult.ActivityStats(
+								stats.totalUsageMinutes,
+								stats.getCategoryPercentages()
+							)
+						);
+
+						try {
+							// DB 저장
+							dailySummaryRepository.save(new DailySummary(
+								localDate,
+								objectMapper.writeValueAsString(result.topKeywords()),
+								objectMapper.writeValueAsString(result.dailyTimeline()),
+								objectMapper.writeValueAsString(result.summaryText()),
+								result.activityStats().totalUsageTimeMinutes(),
+								objectMapper.writeValueAsString(result.activityStats().activityProportions())
+							));
+						} catch (JsonProcessingException e) {
+							throw new RuntimeException("DB 저장용 JSON 직렬화 실패", e);
+						}
+
+						return result;
+					});
 			});
 	}
-
 	private Mono<List<CategorizedPage>> fetchCategoriesFromGPT(List<VisitedPageForTimeDto> pages) {
 		String prompt;
 		try {

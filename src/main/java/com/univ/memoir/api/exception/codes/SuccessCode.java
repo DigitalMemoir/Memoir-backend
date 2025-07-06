@@ -36,6 +36,7 @@ public enum SuccessCode {
      * 200 OK (Additional Success Responses)
      */
     NOTIFICATION_SENT(HttpStatus.OK, "알림이 성공적으로 전송되었습니다."),
+    MONTHLY_SUMMARY_OK(HttpStatus.OK, "월별 활동 요약 조회 성공"),
 
     /**
      * 204 NO CONTENT (Deletion Responses)
