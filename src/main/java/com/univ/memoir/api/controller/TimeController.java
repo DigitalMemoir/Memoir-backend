@@ -1,6 +1,7 @@
 package com.univ.memoir.api.controller;
 
 import com.univ.memoir.api.dto.req.time.TimeAnalysisRequest;
+import com.univ.memoir.api.dto.res.time.ActivityStatsResponse;
 import com.univ.memoir.api.exception.codes.SuccessCode;
 import com.univ.memoir.api.exception.responses.SuccessResponse;
 import com.univ.memoir.core.service.TimeService;
@@ -19,11 +20,12 @@ public class TimeController {
     private final TimeService timeService;
 
     @PostMapping("/time")
-    public Mono<ResponseEntity<SuccessResponse<Map>>> analyzeTimeStats(
-            @RequestHeader("Authorization") String accessToken,
-            @RequestBody TimeAnalysisRequest request
+    public Mono<ResponseEntity<SuccessResponse<ActivityStatsResponse>>> analyzeTimeStats(
+        @RequestHeader("Authorization") String accessToken,
+        @RequestBody TimeAnalysisRequest request
     ) {
         return timeService.analyzeTimeStats(accessToken, request)
-                .map(result -> SuccessResponse.of(SuccessCode.TIME_ANALYSIS_SUCCESS, result));
+            .map(ActivityStatsResponse::new)
+            .map(result -> SuccessResponse.of(SuccessCode.TIME_ANALYSIS_SUCCESS, result));
     }
 }
