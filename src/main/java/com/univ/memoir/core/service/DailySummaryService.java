@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.univ.memoir.api.dto.req.time.TimeAnalysisRequest;
 import com.univ.memoir.api.dto.req.time.VisitedPageForTimeDto;
-
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,11 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +25,7 @@ public class DailySummaryService {
 	private static final String OPENAI_MODEL = "gpt-3.5-turbo";
 	private static final String OPENAI_URI = "/chat/completions";
 
-	public Mono<DailySummaryResponse> summarizeDay(String accessToken, TimeAnalysisRequest request) {
+	public Mono<DailySummaryResult> summarizeDay(String accessToken, TimeAnalysisRequest request) {
 		List<VisitedPageForTimeDto> pages = request.getVisitedPages();
 		if (pages == null || pages.isEmpty()) {
 			return Mono.error(new IllegalArgumentException("방문 기록이 없습니다."));
@@ -40,18 +35,14 @@ public class DailySummaryService {
 			.flatMap(categorizedPages -> {
 				DailyActivityStats stats = calculateStats(categorizedPages);
 				return fetchDailySummaryFromGPT(request.getDate(), categorizedPages)
-					.map(gptSummary -> new DailySummaryResponse(
-						200,
-						"일일 활동 요약 조회 성공",
-						new DailySummaryResponse.Data(
-							request.getDate(),
-							gptSummary.topKeywords,
-							gptSummary.dailyTimeline,
-							gptSummary.summaryText,
-							new DailySummaryResponse.ActivityStats(
-								stats.totalUsageMinutes,
-								stats.getCategoryPercentages()
-							)
+					.map(gptSummary -> new DailySummaryResult(
+						request.getDate(),
+						gptSummary.topKeywords,
+						gptSummary.dailyTimeline,
+						gptSummary.summaryText,
+						new DailySummaryResult.ActivityStats(
+							stats.totalUsageMinutes,
+							stats.getCategoryPercentages()
 						)
 					));
 			})
@@ -101,32 +92,18 @@ public class DailySummaryService {
 			.flatMap(response -> {
 				try {
 					List<?> choices = (List<?>) response.get("choices");
-					if (choices == null || choices.isEmpty()) {
-						return Mono.error(new RuntimeException("GPT 응답에 choices가 없습니다."));
-					}
 					Map<String, Object> message = (Map<String, Object>) ((Map<?, ?>) choices.get(0)).get("message");
-					if (message == null) {
-						return Mono.error(new RuntimeException("GPT 응답에 message가 없습니다."));
-					}
 					String content = Objects.toString(message.get("content"), "").trim();
-					if (content.isEmpty()) {
-						return Mono.error(new RuntimeException("GPT 응답 내용이 비어있습니다."));
-					}
-					List<Map<String, String>> parsedList = objectMapper.readValue(content, List.class);
 
+					List<Map<String, String>> parsedList = objectMapper.readValue(content, List.class);
 					if (parsedList.size() != pages.size()) {
 						return Mono.error(new RuntimeException("카테고리 분류 결과 크기가 요청 데이터와 다릅니다."));
 					}
 
 					List<CategorizedPage> result = new ArrayList<>();
 					for (int i = 0; i < pages.size(); i++) {
-						VisitedPageForTimeDto page = pages.get(i);
-						Map<String, String> catInfo = parsedList.get(i);
-						String category = catInfo.get("category");
-						if (category == null || category.isBlank()) {
-							category = "분류불가";
-						}
-						result.add(new CategorizedPage(page, category));
+						String category = parsedList.get(i).getOrDefault("category", "분류불가");
+						result.add(new CategorizedPage(pages.get(i), category));
 					}
 					return Mono.just(result);
 				} catch (Exception e) {
@@ -142,12 +119,10 @@ public class DailySummaryService {
 		for (CategorizedPage page : pages) {
 			int duration = page.page.getDurationSeconds();
 			totalSeconds += duration;
-			categoryToSeconds.put(page.category,
-				categoryToSeconds.getOrDefault(page.category, 0) + duration);
+			categoryToSeconds.merge(page.category, duration, Integer::sum);
 		}
-		int totalMinutes = totalSeconds / 60;
 
-		return new DailyActivityStats(totalMinutes, categoryToSeconds);
+		return new DailyActivityStats(totalSeconds / 60, categoryToSeconds);
 	}
 
 	private Mono<GptSummary> fetchDailySummaryFromGPT(String date, List<CategorizedPage> pages) {
@@ -193,49 +168,26 @@ public class DailySummaryService {
 			.flatMap(response -> {
 				try {
 					List<?> choices = (List<?>) response.get("choices");
-					if (choices == null || choices.isEmpty()) {
-						return Mono.error(new RuntimeException("GPT 응답에 choices가 없습니다."));
-					}
 					Map<String, Object> message = (Map<String, Object>) ((Map<?, ?>) choices.get(0)).get("message");
-					if (message == null) {
-						return Mono.error(new RuntimeException("GPT 응답에 message가 없습니다."));
-					}
 					String content = Objects.toString(message.get("content"), "").trim();
-					if (content.isEmpty()) {
-						return Mono.error(new RuntimeException("GPT 응답 내용이 비어있습니다."));
-					}
 
 					Map<String, Object> parsed = objectMapper.readValue(content, Map.class);
 
-					// 파싱된 topKeywords
 					List<Map<String, Object>> keywordsRaw = (List<Map<String, Object>>) parsed.get("topKeywords");
-					List<DailySummaryResponse.TopKeyword> keywords = new ArrayList<>();
-					if (keywordsRaw != null) {
-						for (Map<String, Object> k : keywordsRaw) {
-							keywords.add(new DailySummaryResponse.TopKeyword(
-								Objects.toString(k.get("keyword"), ""),
-								((Number) k.get("frequency")).intValue()
-							));
-						}
-					}
+					List<DailySummaryResult.TopKeyword> keywords = keywordsRaw.stream()
+						.map(k -> new DailySummaryResult.TopKeyword(
+							Objects.toString(k.get("keyword"), ""),
+							((Number) k.get("frequency")).intValue()))
+						.toList();
 
-					// 파싱된 dailyTimeline
 					List<Map<String, Object>> timelineRaw = (List<Map<String, Object>>) parsed.get("dailyTimeline");
-					List<DailySummaryResponse.DailyTimelineEntry> timeline = new ArrayList<>();
-					if (timelineRaw != null) {
-						for (Map<String, Object> t : timelineRaw) {
-							timeline.add(new DailySummaryResponse.DailyTimelineEntry(
-								Objects.toString(t.get("time"), ""),
-								Objects.toString(t.get("description"), "")
-							));
-						}
-					}
+					List<DailySummaryResult.DailyTimelineEntry> timeline = timelineRaw.stream()
+						.map(t -> new DailySummaryResult.DailyTimelineEntry(
+							Objects.toString(t.get("time"), ""),
+							Objects.toString(t.get("description"), "")))
+						.toList();
 
-					// 파싱된 summaryText
-					List<String> summaryText = (List<String>) parsed.get("summaryText");
-					if (summaryText == null) {
-						summaryText = List.of();
-					}
+					List<String> summaryText = (List<String>) parsed.getOrDefault("summaryText", List.of());
 
 					return Mono.just(new GptSummary(keywords, timeline, summaryText));
 				} catch (Exception e) {
@@ -263,26 +215,25 @@ public class DailySummaryService {
 			this.categorySeconds = categorySeconds;
 		}
 
-		public List<DailySummaryResponse.ActivityProportion> getCategoryPercentages() {
-			List<DailySummaryResponse.ActivityProportion> list = new ArrayList<>();
+		public List<DailySummaryResult.ActivityProportion> getCategoryPercentages() {
+			List<DailySummaryResult.ActivityProportion> list = new ArrayList<>();
 			if (totalUsageMinutes == 0) return list;
 
 			for (Map.Entry<String, Integer> e : categorySeconds.entrySet()) {
-				int min = e.getValue() / 60;
-				int percent = (int) Math.round(min * 100.0 / totalUsageMinutes);
-				list.add(new DailySummaryResponse.ActivityProportion(e.getKey(), percent));
+				int percent = (int) Math.round((e.getValue() / 60.0) * 100 / totalUsageMinutes);
+				list.add(new DailySummaryResult.ActivityProportion(e.getKey(), percent));
 			}
 			return list;
 		}
 	}
 
 	private static class GptSummary {
-		List<DailySummaryResponse.TopKeyword> topKeywords;
-		List<DailySummaryResponse.DailyTimelineEntry> dailyTimeline;
+		List<DailySummaryResult.TopKeyword> topKeywords;
+		List<DailySummaryResult.DailyTimelineEntry> dailyTimeline;
 		List<String> summaryText;
 
-		public GptSummary(List<DailySummaryResponse.TopKeyword> topKeywords,
-			List<DailySummaryResponse.DailyTimelineEntry> dailyTimeline,
+		public GptSummary(List<DailySummaryResult.TopKeyword> topKeywords,
+			List<DailySummaryResult.DailyTimelineEntry> dailyTimeline,
 			List<String> summaryText) {
 			this.topKeywords = topKeywords;
 			this.dailyTimeline = dailyTimeline;
@@ -290,34 +241,16 @@ public class DailySummaryService {
 		}
 	}
 
-	// DTO - Response Record
-	public static record DailySummaryResponse(
-		int code,
-		String msg,
-		Data data
+	public static record DailySummaryResult(
+		String date,
+		List<TopKeyword> topKeywords,
+		List<DailyTimelineEntry> dailyTimeline,
+		List<String> summaryText,
+		ActivityStats activityStats
 	) {
-		public record Data(
-			String date,
-			List<TopKeyword> topKeywords,
-			List<DailyTimelineEntry> dailyTimeline,
-			List<String> summaryText,
-			ActivityStats activityStats
-		) {
-		}
-
-		public record TopKeyword(String keyword, int frequency) {
-		}
-
-		public record DailyTimelineEntry(String time, String description) {
-		}
-
-		public record ActivityStats(
-			int totalUsageTimeMinutes,
-			List<ActivityProportion> activityProportions
-		) {
-		}
-
-		public record ActivityProportion(String category, int percentage) {
-		}
+		public record TopKeyword(String keyword, int frequency) {}
+		public record DailyTimelineEntry(String time, String description) {}
+		public record ActivityStats(int totalUsageTimeMinutes, List<ActivityProportion> activityProportions) {}
+		public record ActivityProportion(String category, int percentage) {}
 	}
 }
