@@ -1,11 +1,20 @@
 package com.univ.memoir.config.jwt;
 
+import com.univ.memoir.core.domain.User;
+import com.univ.memoir.core.repository.UserRepository;
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
+import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
 
@@ -16,36 +25,86 @@ public class JwtProvider {
     @Value("${spring.security.jwt.secret}")
     private String secretKey;
 
-    private static final long ACCESS_TOKEN_EXPIRATION = 1000L * 60 * 60; // 1시간
+    private static final long ACCESS_TOKEN_EXPIRATION = 1000L * 60 * 60;      // 1시간
     private static final long REFRESH_TOKEN_EXPIRATION = 1000L * 60 * 60 * 24 * 14; // 14일
+
+    private Key key;
+
+    private final UserRepository userRepository;
 
     @PostConstruct
     protected void init() {
-        secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
+        try {
+            String trimmedKey = secretKey.trim();
+            byte[] keyBytes = Base64.getDecoder().decode(trimmedKey);
+            this.key = Keys.hmacShaKeyFor(keyBytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public String resolveToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7).trim();
+        }
+        return null;
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            return true;
+        } catch (JwtException e) {
+            return false;
+        }
     }
 
     public String createAccessToken(String email) {
-        return createToken(email, ACCESS_TOKEN_EXPIRATION);
-    }
-
-    public String createRefreshToken(String email) {
-        return createToken(email, REFRESH_TOKEN_EXPIRATION);
-    }
-
-    // 내부 토큰 생성 로직
-    private String createToken(String email, long expirationTime) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expirationTime);
+        Date expiryDate = new Date(now.getTime() + ACCESS_TOKEN_EXPIRATION);
 
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(SignatureAlgorithm.HS256, secretKey)
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
+    public String createRefreshToken(String email) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + REFRESH_TOKEN_EXPIRATION);
+
+        return Jwts.builder()
+                .setSubject(email)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+
     public String getEmailFromToken(String token) {
-        return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject();
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7).trim();
+        } else {
+            token = token.trim();
+        }
+
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+
+    public Authentication getAuthentication(String token) {
+        String email = getEmailFromToken(token);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        UserDetails userDetails = new CustomUserDetails(user);
+        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
 }

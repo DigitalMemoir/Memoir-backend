@@ -13,20 +13,21 @@ public class SwaggerConfig {
 
     @Bean
     public OpenAPI openAPI() {
-        String jwtSchemeName = "JWT";
+        String securitySchemeName = "bearerAuth";
 
         return new OpenAPI()
                 .info(new Info()
                         .title("Collec API Document")
                         .version("v0.0.1")
                         .description("collec API 문서입니다."))
-                .addSecurityItem(new SecurityRequirement().addList(jwtSchemeName))
+                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
-                        .addSecuritySchemes(jwtSchemeName,
+                        .addSecuritySchemes(securitySchemeName,
                                 new SecurityScheme()
-                                        .name("Authorization")      // header 이름
-                                        .type(SecurityScheme.Type.APIKEY) // bearer 대신 apiKey
-                                        .in(SecurityScheme.In.HEADER)     // 헤더에 설정
+                                        .name("Authorization")
+                                        .type(SecurityScheme.Type.HTTP)
+                                        .scheme("bearer")
+                                        .bearerFormat("JWT")
                         ));
     }
 }

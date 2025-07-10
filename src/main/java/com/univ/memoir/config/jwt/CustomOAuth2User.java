@@ -34,4 +34,10 @@ public class CustomOAuth2User implements OAuth2User {
     public String getName() {
         return String.valueOf(user.getId());
     }
+
+    // getAttribute("isNewUser")를 위한 함수
+    @Override
+    public <A> A getAttribute(String name) {
+        return (A) attributes.get(name);
+    }
 }
