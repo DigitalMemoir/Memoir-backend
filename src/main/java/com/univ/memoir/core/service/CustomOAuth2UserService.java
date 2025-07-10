@@ -14,7 +14,6 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -36,30 +35,47 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             throw new OAuth2AuthenticationException("Google 계정 정보를 가져오지 못했습니다.");
         }
 
-        boolean isNewUser = !userRepository.existsByGoogleId(googleId);
+        String accessToken = jwtProvider.createAccessToken(email);
 
-        String refreshToken = jwtProvider.createRefreshToken(email);
+        User user = userRepository.findByGoogleId(googleId).orElse(null);
+        boolean isNewUser = false;
 
-        User user = userRepository.findByGoogleId(googleId)
-                .map(existingUser -> {
-                    existingUser.updateName(name);
-                    existingUser.updateProfileUrl(picture);
-                    existingUser.updateRefreshToken(refreshToken);
-                    return userRepository.save(existingUser);
-                })
-                .orElseGet(() -> userRepository.save(User.builder()
-                        .googleId(googleId)
-                        .email(email)
-                        .name(name)
-                        .profileUrl(picture)
-                        .refreshToken(refreshToken)
-                        .build()));
+        if (user == null) {
+            user = User.builder()
+                    .googleId(googleId)
+                    .email(email)
+                    .name(name)
+                    .profileUrl(picture)
+                    .accessToken(accessToken)
+                    .build();
+            userRepository.save(user);
+            isNewUser = true;
+        } else {
+            boolean changed = false;
 
-        // OAuth2User에 신규회원 여부를 심어줌
-        Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
+            if (!name.equals(user.getName())) {
+                user.updateName(name);
+                changed = true;
+            }
+            if (!picture.equals(user.getProfileUrl())) {
+                user.updateProfileUrl(picture);
+                changed = true;
+            }
+            if (!accessToken.equals(user.getAccessToken())) {
+                user.updateRefreshToken(accessToken);
+                changed = true;
+            }
+
+            if (changed) {
+                userRepository.save(user);
+            }
+        }
+
+        // 기존 oAuth2User attributes 복사 후 isNewUser 속성 추가
+        var attributes = new HashMap<>(oAuth2User.getAttributes());
         attributes.put("isNewUser", isNewUser);
 
+        // CustomOAuth2User로 감싸서 반환
         return new CustomOAuth2User(user, attributes);
     }
-
 }
