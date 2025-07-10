@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -29,8 +30,8 @@ public class User {
     @Column(name = "profile_url", length = 2048)
     private String profileUrl;
 
-    @Column(name = "refresh_token")
-    private String refreshToken;
+    @Column(name = "access_token")
+    private String accessToken;
 
     @Column(length = 1, nullable = false)
     private String status = "N"; // 'N' = 정상 / 'Y' = 탈퇴
@@ -41,13 +42,22 @@ public class User {
     @Column(name = "interest")
     private Set<InterestType> interests = new HashSet<>();
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "user_bookmarks",
+            joinColumns = @JoinColumn(name = "user_id"),
+            uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "bookmark_url"})
+    )
+    @Column(name = "bookmark_url", length = 512, nullable = false)
+    private Set<String> bookmarkUrls = new HashSet<>();
+
     @Builder
-    public User(String googleId, String email, String name, String profileUrl, String refreshToken) {
+    public User(String googleId, String email, String name, String profileUrl, String accessToken) {
         this.googleId = googleId;
         this.email = email;
         this.name = name;
         this.profileUrl = profileUrl;
-        this.refreshToken = refreshToken;
+        this.accessToken = accessToken;
         this.status = "N";
     }
 
@@ -59,13 +69,9 @@ public class User {
         this.profileUrl = profileUrl;
     }
 
-    public void updateRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
-
     public void withdraw() {
         this.status = "Y";
-        this.refreshToken = null;
+        this.accessToken = null;
     }
 
     public boolean isActive() {
@@ -77,5 +83,15 @@ public class User {
         this.interests.addAll(newInterests);
     }
 
+    public void addBookmarkUrl(String url) {
+        this.bookmarkUrls.add(url);
+    }
 
+    public void removeBookmarkUrl(String url) {
+        this.bookmarkUrls.remove(url);
+    }
+
+    public Set<String> getBookmarks() {
+        return bookmarkUrls;
+    }
 }
