@@ -35,7 +35,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             throw new OAuth2AuthenticationException("Google 계정 정보를 가져오지 못했습니다.");
         }
 
-        String accessToken = jwtProvider.createAccessToken(email);
+        String refreshToken = jwtProvider.createAccessToken(email);
 
         User user = userRepository.findByGoogleId(googleId).orElse(null);
         boolean isNewUser = false;
@@ -46,7 +46,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                     .email(email)
                     .name(name)
                     .profileUrl(picture)
-                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
                     .build();
             userRepository.save(user);
             isNewUser = true;
@@ -61,8 +61,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                 user.updateProfileUrl(picture);
                 changed = true;
             }
-            if (!accessToken.equals(user.getAccessToken())) {
-                user.updateRefreshToken(accessToken);
+            if (!refreshToken.equals(user.getRefreshToken())) {
+                user.updateRefreshToken(refreshToken);
                 changed = true;
             }
 

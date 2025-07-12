@@ -14,8 +14,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
-import java.util.Base64;
 import java.util.Date;
 
 @Component
@@ -34,13 +34,8 @@ public class JwtProvider {
 
     @PostConstruct
     protected void init() {
-        try {
-            String trimmedKey = secretKey.trim();
-            byte[] keyBytes = Base64.getDecoder().decode(trimmedKey);
-            this.key = Keys.hmacShaKeyFor(keyBytes);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        byte[] keyBytes = secretKey.trim().getBytes(StandardCharsets.UTF_8);
+        this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String resolveToken(HttpServletRequest request) {
