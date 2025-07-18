@@ -56,12 +56,21 @@ public class DailySummaryController {
 	}
 
 
-	@GetMapping("/daily/{date}")
+	@GetMapping("/daily/popup/{date}")
 	@Operation(summary = "일별 요약 페이지", description = "일별 요약 팝업을 조회합니다.")
 	public ResponseEntity<SuccessResponse<DailyPopupResponse.Data>> getDailyPopup(
 		@PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date
 	) {
 		DailyPopupResponse.Data data = monthlySummaryService.getDailyPopup(date);
+		return SuccessResponse.of(SuccessCode.DAILY_POPUP_OK, data);
+	}
+
+	@GetMapping("/daily/{date}")
+	@Operation(summary = "일별 요약 페이지", description = "일별 요약 팝업을 조회합니다.")
+	public ResponseEntity<SuccessResponse<DailySummaryService.DailySummaryResult>> getDaily(
+		@PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date
+	) {
+		DailySummaryService.DailySummaryResult data = dailySummaryService.getDaily(date);
 		return SuccessResponse.of(SuccessCode.DAILY_POPUP_OK, data);
 	}
 }

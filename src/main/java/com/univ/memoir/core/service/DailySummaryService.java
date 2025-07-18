@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -20,6 +21,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.univ.memoir.api.dto.req.time.TimeAnalysisRequest;
 import com.univ.memoir.api.dto.req.time.VisitedPageForTimeDto;
+import com.univ.memoir.api.dto.res.DailyPopupResponse;
 import com.univ.memoir.api.exception.codes.ErrorCode;
 import com.univ.memoir.api.exception.customException.UserNotFoundException;
 import com.univ.memoir.core.domain.DailySummary;
@@ -310,6 +312,66 @@ public class DailySummaryService {
 		}
 	}
 
+	public DailySummaryResult getDaily(LocalDate date) {
+		Optional<DailySummary> optionalData = dailySummaryRepository.findByDate(date);
+
+		if (optionalData.isEmpty()) {
+			// 데이터 없을 경우, 빈 객체 반환하거나 예외 처리
+			return new DailySummaryResult(
+				date.toString(),
+				Collections.emptyList(),
+				Collections.emptyList(),
+				Collections.emptyList(),
+				new DailySummaryResult.ActivityStats(0, Collections.emptyList())
+			);
+		}
+
+		DailySummary data = optionalData.get();
+
+		try {
+			List<DailySummaryResult.TopKeyword> topKeywords = objectMapper.readValue(
+				data.getTopKeywordsJson(),
+				objectMapper.getTypeFactory().constructCollectionType(
+					List.class, DailySummaryResult.TopKeyword.class
+				)
+			);
+
+			List<DailySummaryResult.DailyTimelineEntry> dailyTimeline = objectMapper.readValue(
+				data.getTimelineJson(),
+				objectMapper.getTypeFactory().constructCollectionType(
+					List.class, DailySummaryResult.DailyTimelineEntry.class
+				)
+			);
+
+			List<String> summaryText = objectMapper.readValue(
+				data.getSummaryTextJson(),
+				objectMapper.getTypeFactory().constructCollectionType(
+					List.class, String.class
+				)
+			);
+
+			List<DailySummaryResult.ActivityProportion> activityProportions = objectMapper.readValue(
+				data.getActivityProportionsJson(),
+				objectMapper.getTypeFactory().constructCollectionType(
+					List.class, DailySummaryResult.ActivityProportion.class
+				)
+			);
+
+			return new DailySummaryResult(
+				date.toString(),
+				topKeywords,
+				dailyTimeline,
+				summaryText,
+				new DailySummaryResult.ActivityStats(
+					data.getTotalUsageMinutes(),
+					activityProportions
+				)
+			);
+		} catch (JsonProcessingException e) {
+			log.error("일일 요약 데이터 역직렬화 실패", e);
+			throw new RuntimeException("일일 요약 데이터 역직렬화 실패", e);
+		}
+	}
 
 	// 내부 클래스들은 변경 없음
 	private static class CategorizedPage {
