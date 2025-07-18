@@ -1,7 +1,7 @@
 package com.univ.memoir.api.controller;
 
-import com.univ.memoir.api.dto.req.BookmarkRequestDto;
-import com.univ.memoir.api.dto.req.BookmarkUpdateRequestDto;
+import com.univ.memoir.api.dto.req.bookmark.BookmarkRequestDto;
+import com.univ.memoir.api.dto.req.bookmark.BookmarkUpdateRequestDto;
 import com.univ.memoir.api.exception.responses.SuccessResponse;
 import com.univ.memoir.core.service.BookmarkService;
 import io.swagger.v3.oas.annotations.Operation;
