@@ -34,4 +34,6 @@ public class SummaryController {
 		MonthlySummaryResponse.Data data = monthlySummaryService.getMonthlySummary(yearMonth);
 		return SuccessResponse.of(SuccessCode.MONTHLY_SUMMARY_OK, data);
 	}
+
+
 }
