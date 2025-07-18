@@ -1,5 +1,10 @@
 package com.univ.memoir.core.service;
 
+import java.util.Set;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.univ.memoir.api.dto.req.bookmark.BookmarkRequestDto;
 import com.univ.memoir.api.dto.req.bookmark.BookmarkUpdateRequestDto;
 import com.univ.memoir.api.exception.codes.ErrorCode;
@@ -9,11 +14,8 @@ import com.univ.memoir.api.exception.responses.SuccessResponse;
 import com.univ.memoir.config.jwt.JwtProvider;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor

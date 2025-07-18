@@ -2,8 +2,6 @@ package com.univ.memoir.api.controller;
 
 import java.time.YearMonth;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +14,8 @@ import com.univ.memoir.api.exception.codes.SuccessCode;
 import com.univ.memoir.api.exception.responses.SuccessResponse;
 import com.univ.memoir.core.service.MonthlySummaryService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -34,4 +34,6 @@ public class SummaryController {
 		MonthlySummaryResponse.Data data = monthlySummaryService.getMonthlySummary(yearMonth);
 		return SuccessResponse.of(SuccessCode.MONTHLY_SUMMARY_OK, data);
 	}
+
+
 }

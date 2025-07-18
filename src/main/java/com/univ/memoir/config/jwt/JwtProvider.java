@@ -1,12 +1,9 @@
 package com.univ.memoir.config.jwt;
 
-import com.univ.memoir.core.domain.User;
-import com.univ.memoir.core.repository.UserRepository;
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
-import jakarta.annotation.PostConstruct;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.util.Date;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -14,9 +11,16 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
-import java.util.Date;
+import com.univ.memoir.core.domain.User;
+import com.univ.memoir.core.repository.UserRepository;
+
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor

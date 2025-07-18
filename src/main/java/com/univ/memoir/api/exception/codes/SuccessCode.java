@@ -1,8 +1,9 @@
 package com.univ.memoir.api.exception.codes;
 
+import org.springframework.http.HttpStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.springframework.http.HttpStatus;
 
 @AllArgsConstructor
 @Getter
@@ -41,6 +42,7 @@ public enum SuccessCode {
      */
     NOTIFICATION_SENT(HttpStatus.OK, "알림이 성공적으로 전송되었습니다."),
     MONTHLY_SUMMARY_OK(HttpStatus.OK, "월별 활동 요약 조회 성공"),
+    DAILY_POPUP_OK(HttpStatus.OK, "일별 활동 요약 조회 성공"),
 
     /**
      * 204 NO CONTENT (Deletion Responses)

@@ -1,19 +1,18 @@
 package com.univ.memoir.core.service;
 
+import java.util.Set;
+
+import org.springframework.stereotype.Service;
+
 import com.univ.memoir.api.exception.codes.ErrorCode;
 import com.univ.memoir.api.exception.customException.InvalidTokenException;
-import com.univ.memoir.api.exception.customException.UserNotFoundException;
 import com.univ.memoir.config.jwt.JwtProvider;
 import com.univ.memoir.core.domain.InterestType;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.UserRepository;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

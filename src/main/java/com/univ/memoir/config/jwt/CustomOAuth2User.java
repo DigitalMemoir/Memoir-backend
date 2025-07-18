@@ -1,13 +1,15 @@
 package com.univ.memoir.config.jwt;
 
-import com.univ.memoir.core.domain.User;
-import lombok.Getter;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+
+import com.univ.memoir.core.domain.User;
+
+import lombok.Getter;
 
 public class CustomOAuth2User implements OAuth2User {
 

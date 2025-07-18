@@ -1,9 +1,9 @@
 package com.univ.memoir.api.dto.res.time;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
-
-import java.util.List;
 
 @Data
 @AllArgsConstructor

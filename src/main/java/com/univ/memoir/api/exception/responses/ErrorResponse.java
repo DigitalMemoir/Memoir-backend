@@ -1,13 +1,15 @@
 package com.univ.memoir.api.exception.responses;
 
+import org.springframework.http.ResponseEntity;
+
 import com.univ.memoir.api.exception.codes.ErrorCode;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import org.springframework.http.ResponseEntity;
 
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PUBLIC)
 @Builder
 @Getter
 public class ErrorResponse {

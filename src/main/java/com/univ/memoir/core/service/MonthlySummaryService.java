@@ -9,11 +9,14 @@ import java.util.Objects;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.univ.memoir.api.dto.res.DailyPopupResponse;
 import com.univ.memoir.api.dto.res.MonthlySummaryResponse;
 import com.univ.memoir.core.domain.DailySummary;
 import com.univ.memoir.core.repository.DailySummaryRepository;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -53,5 +56,19 @@ public class MonthlySummaryService {
 			return "기록 없음";
 		}
 		return "기록 없음";
+	}
+
+	public DailyPopupResponse.Data getDailyPopup(LocalDate date) {
+		DailySummary summary = dailySummaryRepository.findByDate(date).orElseThrow(() -> new EntityNotFoundException("해당 날짜의 요약이 존재하지 않습니다."));
+		List<String> summaryTexts = parseSummaryTextJson(summary.getSummaryTextJson());
+
+		return new DailyPopupResponse.Data(date.toString(), summaryTexts);
+	}
+	private List<String> parseSummaryTextJson(String json) {
+		try {
+			return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException("summaryTextJson 파싱 실패", e);
+		}
 	}
 }
