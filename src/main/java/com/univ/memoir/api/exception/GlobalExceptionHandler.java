@@ -2,6 +2,8 @@ package com.univ.memoir.api.exception;
 
 import com.univ.memoir.api.exception.codes.ErrorCode;
 import com.univ.memoir.api.exception.responses.ErrorResponse;
+
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +33,13 @@ public class GlobalExceptionHandler {
         log.info("Error.{}: {}1", exception.getClass().getSimpleName(), exception.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.create());
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(new ErrorResponse(404, ex.getMessage()));
     }
 
 }
