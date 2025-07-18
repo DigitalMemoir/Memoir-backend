@@ -4,7 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.univ.memoir.api.dto.req.time.TimeAnalysisRequest;
 import com.univ.memoir.api.dto.req.time.VisitedPageForTimeDto;
+import com.univ.memoir.api.exception.codes.ErrorCode;
+import com.univ.memoir.api.exception.customException.UserNotFoundException;
 import com.univ.memoir.core.domain.DailySummary;
+import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.DailySummaryRepository;
 
 import org.slf4j.Logger;
@@ -27,16 +30,18 @@ public class DailySummaryService {
 	private final RestTemplate restTemplate;
 	private final ObjectMapper objectMapper;
 	private final DailySummaryRepository dailySummaryRepository;
+	private final UserService userService;
 
 	public DailySummaryService(
-			@Qualifier("openAiRestTemplate") RestTemplate restTemplate,
-			ObjectMapper objectMapper,
-			DailySummaryRepository dailySummaryRepository
-	) {
+            @Qualifier("openAiRestTemplate") RestTemplate restTemplate,
+            ObjectMapper objectMapper,
+            DailySummaryRepository dailySummaryRepository, UserService userService
+    ) {
 		this.restTemplate = restTemplate;
 		this.objectMapper = objectMapper;
 		this.dailySummaryRepository = dailySummaryRepository;
-		}
+        this.userService = userService;
+    }
 	@Value("${openai.model}")
 	private String OPENAI_MODEL;
 
@@ -56,6 +61,12 @@ public class DailySummaryService {
 	 * @throws RuntimeException GPT 통신 또는 JSON 처리 중 오류 발생 시
 	 */
 	public DailySummaryResult summarizeDay(String accessToken, TimeAnalysisRequest request) {
+		User currentUser = userService.findByAccessToken(accessToken);
+
+		if (currentUser == null) {
+			throw new UserNotFoundException(ErrorCode.USER_NOT_FOUND);
+		}
+
 		List<VisitedPageForTimeDto> pages = request.getVisitedPages();
 		if (pages == null || pages.isEmpty()) {
 			throw new IllegalArgumentException("방문 기록이 없습니다.");
