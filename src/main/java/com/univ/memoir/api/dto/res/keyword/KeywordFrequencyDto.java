@@ -1,11 +1,9 @@
-package com.univ.memoir.api.dto.res;
+package com.univ.memoir.api.dto.res.keyword;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.Data;
 
-@Getter
-@NoArgsConstructor
+@Data
 @AllArgsConstructor
 public class KeywordFrequencyDto {
     private String keyword;
