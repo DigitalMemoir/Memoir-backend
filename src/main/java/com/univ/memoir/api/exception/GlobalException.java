@@ -1,6 +1,7 @@
 package com.univ.memoir.api.exception;
 
 import com.univ.memoir.api.exception.codes.ErrorCode;
+
 import lombok.Getter;
 
 @Getter

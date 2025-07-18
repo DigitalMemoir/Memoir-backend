@@ -3,8 +3,21 @@ package com.univ.memoir.core.service;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,17 +26,9 @@ import com.univ.memoir.api.dto.req.time.VisitedPageForTimeDto;
 import com.univ.memoir.api.dto.res.time.ActivityStats;
 import com.univ.memoir.api.dto.res.time.CategorySummary;
 import com.univ.memoir.api.dto.res.time.HourlyBreakdown;
-
 import com.univ.memoir.api.exception.codes.ErrorCode;
 import com.univ.memoir.api.exception.customException.UserNotFoundException;
 import com.univ.memoir.core.domain.User;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.oauth2.jwt.JwtValidationException;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 @Service
 public class TimeService {

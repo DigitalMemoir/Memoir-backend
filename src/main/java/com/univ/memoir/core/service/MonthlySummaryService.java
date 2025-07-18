@@ -5,9 +5,7 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -18,6 +16,7 @@ import com.univ.memoir.api.dto.res.MonthlySummaryResponse;
 import com.univ.memoir.core.domain.DailySummary;
 import com.univ.memoir.core.repository.DailySummaryRepository;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 
 @Service

@@ -1,11 +1,7 @@
 package com.univ.memoir.core.service;
 
-import com.univ.memoir.api.exception.codes.ErrorCode;
-import com.univ.memoir.config.jwt.CustomOAuth2User;
-import com.univ.memoir.config.jwt.JwtProvider;
-import com.univ.memoir.core.domain.User;
-import com.univ.memoir.core.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import java.util.HashMap;
+
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
@@ -13,7 +9,12 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
+import com.univ.memoir.config.jwt.CustomOAuth2User;
+import com.univ.memoir.config.jwt.JwtProvider;
+import com.univ.memoir.core.domain.User;
+import com.univ.memoir.core.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor

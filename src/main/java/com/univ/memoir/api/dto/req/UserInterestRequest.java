@@ -1,11 +1,12 @@
 package com.univ.memoir.api.dto.req;
 
+import java.util.Set;
+
 import com.univ.memoir.core.domain.InterestType;
+
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
-
-import java.util.Set;
 
 @Getter
 public class UserInterestRequest {

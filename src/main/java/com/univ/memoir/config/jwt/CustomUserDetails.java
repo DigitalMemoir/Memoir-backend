@@ -1,13 +1,15 @@
 package com.univ.memoir.config.jwt;
 
-import com.univ.memoir.core.domain.User;
-import lombok.Getter;
+import java.util.Collection;
+import java.util.Collections;
+
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.Collections;
+import com.univ.memoir.core.domain.User;
+
+import lombok.Getter;
 
 @Getter
 public class CustomUserDetails implements UserDetails {
