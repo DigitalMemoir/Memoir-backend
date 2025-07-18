@@ -1,7 +1,7 @@
 package com.univ.memoir.core.service;
 
-import com.univ.memoir.api.dto.req.BookmarkRequestDto;
-import com.univ.memoir.api.dto.req.BookmarkUpdateRequestDto;
+import com.univ.memoir.api.dto.req.bookmark.BookmarkRequestDto;
+import com.univ.memoir.api.dto.req.bookmark.BookmarkUpdateRequestDto;
 import com.univ.memoir.api.exception.codes.ErrorCode;
 import com.univ.memoir.api.exception.codes.SuccessCode;
 import com.univ.memoir.api.exception.customException.InvalidTokenException;

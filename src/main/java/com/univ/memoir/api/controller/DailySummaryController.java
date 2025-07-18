@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 @RestController
 @RequiredArgsConstructor
@@ -31,11 +30,15 @@ public class DailySummaryController {
 	 */
 	@PostMapping(value = "/daily", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	@Operation(summary = "일일 요약", description = "일일 요약 페이지를 생성합니다.")
-	public Mono<ResponseEntity<SuccessResponse<DailySummaryService.DailySummaryResult>>> getDailySummary(
-		@RequestHeader(value = "Authorization", required = false) String accessToken,
-		@RequestBody TimeAnalysisRequest request) {
+	public ResponseEntity<SuccessResponse<DailySummaryService.DailySummaryResult>> getDailySummary(
+			@RequestHeader(value = "Authorization", required = false) String accessToken,
+			@RequestBody TimeAnalysisRequest request) {
 
-		return dailySummaryService.summarizeDay(accessToken, request)
-			.map(result -> SuccessResponse.of(SuccessCode.TIME_ANALYSIS_SUCCESS, result));
+		DailySummaryService.DailySummaryResult result = dailySummaryService.summarizeDay(accessToken, request);
+
+		return ResponseEntity.ok(
+				SuccessResponse.of(SuccessCode.TIME_ANALYSIS_SUCCESS, result).getBody()
+		);
 	}
 }
+
