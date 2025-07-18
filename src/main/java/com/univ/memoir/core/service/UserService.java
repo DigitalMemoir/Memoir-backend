@@ -31,17 +31,23 @@ public class UserService {
         return user;
     }
 
-    /**
-     * 사용자 ID로 관심사 목록 조회
-     */
-    public List<String> getUserInterests(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(ErrorCode.USER_NOT_FOUND));
+    public User findByAccessToken(String accessToken) {
+        // Bearer 접두사 제거
+        if (accessToken.startsWith("Bearer ")) {
+            accessToken = accessToken.substring(7).trim();
+        }
 
-        return user.getInterests()
-                .stream()
-                .map(InterestType::getCategoryName)
-                .collect(Collectors.toList());
+        // 토큰 유효성 검사
+        if (!jwtProvider.validateToken(accessToken)) {
+            throw new InvalidTokenException(ErrorCode.INVALID_JWT_ACCESS_TOKEN);
+        }
+
+        // 이메일 추출
+        String email = jwtProvider.getEmailFromToken(accessToken);
+
+        // 사용자 조회
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new InvalidTokenException(ErrorCode.INVALID_JWT_ACCESS_TOKEN));
     }
 
 }
