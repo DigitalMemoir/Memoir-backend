@@ -15,6 +15,7 @@ public enum SuccessCode {
     OK(HttpStatus.OK, "요청이 성공했습니다."),
     BOOKMARK_UPDATE_SUCCESS(HttpStatus.OK,"북마크가 수정되었습니다."),
     BOOKMARK_RETRIEVE_SUCCESS(HttpStatus.OK,"북마크 조회에 성공했습니다."),
+    USER_PROFILE_RETRIEVE_SUCCESS(HttpStatus.OK, "사용자 프로필 조회에 성공했습니다."),
     TOP_KEYWORDS_RETRIEVED_SUCCESS(HttpStatus.OK,"오늘의 키워드 조회에 성공했습니다."),
 
     /**
