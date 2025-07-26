@@ -17,13 +17,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
-    @Value("${oauth2.redirect-uri}")
-    private String defaultRedirectUri;
-
-    @Value("${oauth2.redirect-uri.onboarding}")
-    private String onboardingRedirectUri;
-
     private final JwtProvider jwtProvider;
+
+    @Value("${oauth2.redirect-uri.githubpages}")
+    private String githubPagesRedirectUri;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -31,18 +28,14 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
         String email = oAuth2User.getAttribute("email");
+
         String accessToken = jwtProvider.createAccessToken(email);
 
-        // 신규 회원 여부 판별
         Boolean isNewUserAttr = oAuth2User.getAttribute("isNewUser");
         boolean isNewUser = Boolean.TRUE.equals(isNewUserAttr);
 
-        // 리디렉트 URI 선택
-        String baseRedirectUri = isNewUser ? onboardingRedirectUri : defaultRedirectUri;
-
-        // UriComponentsBuilder로 accessToken 포함해서 URL 생성
         String targetUrl = UriComponentsBuilder
-                .fromUriString(baseRedirectUri)
+                .fromUriString(githubPagesRedirectUri)
                 .queryParam("token", accessToken)
                 .queryParam("isNewUser", isNewUser)
                 .build()
