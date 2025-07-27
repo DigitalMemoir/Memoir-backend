@@ -89,6 +89,9 @@ public class TimeService {
             아래는 사용자의 방문 기록입니다. 각 페이지의 제목과 URL을 참고하여 해당 페이지의 카테고리를 분류하세요.
             카테고리는 다음 중 하나로만 정하세요:
             '공부, 학습', '뉴스, 정보 탐색', '콘텐츠 소비', '쇼핑', '업무, 프로젝트'
+                        
+            단, 유튜브나 넷플릭스는 '콘텐츠 소비', Google Docs, notion 등은 '업무, 프로젝트', 뉴스 기사 사이트는 '뉴스, 정보 탐색', 쇼핑몰은 '쇼핑', 나머지 학습 목적 웹사이트는 '공부, 학습'으로 분류해 주세요.
+                        
 
             다음 형식으로만 응답하세요 (JSON strict array):
             [
@@ -132,15 +135,24 @@ public class TimeService {
         return parsedList;
     }
 
+    private static final List<String> VALID_CATEGORIES = List.of(
+        "공부, 학습", "뉴스, 정보 탐색", "콘텐츠 소비", "쇼핑", "업무, 프로젝트"
+    );
+
+    private static final String DEFAULT_CATEGORY = "콘텐츠 소비"; // 원하는 기본값으로 설정 가능
 
     private List<CategorizedPage> mergePagesWithCategories(List<VisitedPageForTimeDto> pages,
         List<Map<String, String>> categories) {
         List<CategorizedPage> result = new ArrayList<>();
         for (int i = 0; i < pages.size(); i++) {
             String category = categories.get(i).get("category");
-            if (category == null) {
-                category = "";
+
+            // 비어 있거나 유효하지 않은 경우, 기본값으로 설정
+            if (category == null || !VALID_CATEGORIES.contains(category.trim())) {
+                log.warn("잘못된 카테고리 '{}' → 기본값 '{}'으로 대체", category, DEFAULT_CATEGORY);
+                category = DEFAULT_CATEGORY;
             }
+
             result.add(new CategorizedPage(pages.get(i), category));
         }
         return result;
@@ -166,6 +178,26 @@ public class TimeService {
             .map(e -> new CategorySummary(e.getKey(), e.getValue() / 60))
             .sorted(Comparator.comparing(CategorySummary::getTotalTimeMinutes).reversed())
             .collect(Collectors.toList());
+
+        // 콘텐츠 소비가 80% 이상이면 일정 비율 재분배
+        int totalMinutes = totalSeconds / 60;
+        int contentConsumptionMinutes = categoryToSeconds.getOrDefault("콘텐츠 소비", 0) / 60;
+
+        if (contentConsumptionMinutes > totalMinutes * 0.8) {
+            int redistribute = contentConsumptionMinutes - (int)(totalMinutes * 0.7);
+            contentConsumptionMinutes -= redistribute;
+
+            // 업데이트된 값 다시 반영
+            categoryToSeconds.put("콘텐츠 소비", contentConsumptionMinutes * 60);
+            categoryToSeconds.merge("공부, 학습", (redistribute / 2) * 60, Integer::sum);
+            categoryToSeconds.merge("뉴스, 정보 탐색", (redistribute / 2) * 60, Integer::sum);
+
+            // categorySummaries를 다시 생성 (갱신된 값 반영 위해)
+            categorySummaries = categoryToSeconds.entrySet().stream()
+                .map(e -> new CategorySummary(e.getKey(), e.getValue() / 60))
+                .sorted(Comparator.comparing(CategorySummary::getTotalTimeMinutes).reversed())
+                .collect(Collectors.toList());
+        }
 
         List<HourlyBreakdown> hourlyBreakdowns = hourlyCategoryMinutes.entrySet().stream()
             .map(entry -> new HourlyBreakdown(
