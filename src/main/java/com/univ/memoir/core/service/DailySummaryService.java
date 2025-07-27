@@ -21,7 +21,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.univ.memoir.api.dto.req.time.TimeAnalysisRequest;
 import com.univ.memoir.api.dto.req.time.VisitedPageForTimeDto;
-import com.univ.memoir.api.dto.res.DailyPopupResponse;
 import com.univ.memoir.api.exception.codes.ErrorCode;
 import com.univ.memoir.api.exception.customException.UserNotFoundException;
 import com.univ.memoir.core.domain.DailySummary;
