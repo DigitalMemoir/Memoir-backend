@@ -176,8 +176,15 @@ public class DailySummaryService {
 			String content = Objects.toString(message.get("content"), "").trim();
 
 			List<Map<String, String>> parsedList = objectMapper.readValue(content, List.class);
-			if (parsedList.size() != pages.size()) {
-				throw new RuntimeException("카테고리 분류 결과 크기가 요청 데이터와 다릅니다. GPT 응답: " + content);
+			// GPT 응답 개수가 요청보다 적으면 "분류불가" 기본값으로 채움
+			if (parsedList.size() < pages.size()) {
+				int diff = pages.size() - parsedList.size();
+				for (int i = 0; i < diff; i++) {
+					parsedList.add(Map.of("title", "", "url", "", "category", "분류불가"));
+				}
+			} else if (parsedList.size() > pages.size()) {
+				// 응답이 너무 많으면 자르기
+				parsedList = parsedList.subList(0, pages.size());
 			}
 
 			List<CategorizedPage> result = new ArrayList<>();
