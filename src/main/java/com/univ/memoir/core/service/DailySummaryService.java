@@ -57,14 +57,19 @@ public class DailySummaryService {
 	@Value("${openai.uri}")
 	private String OPENAI_URI;
 
+	// --- ★ 카테고리 검증용 상수 추가 ★ ---
+	private static final List<String> VALID_CATEGORIES = List.of(
+		"공부, 학습", "뉴스, 정보 탐색", "콘텐츠 소비", "쇼핑", "업무, 프로젝트"
+	);
+
+	private static final String DEFAULT_CATEGORY = "콘텐츠 소비";
+
 	/**
 	 * 사용자의 일일 활동을 요약합니다.
 	 *
-	 * @param accessToken 사용자 인증 토큰 (현재 코드에서는 사용되지 않지만, 필요시 확장 가능)
+	 * @param accessToken 사용자 인증 토큰
 	 * @param request 시간 분석 요청 DTO
 	 * @return 요약된 일일 활동 결과
-	 * @throws IllegalArgumentException 방문 기록이 없거나 데이터 처리 중 오류 발생 시
-	 * @throws RuntimeException GPT 통신 또는 JSON 처리 중 오류 발생 시
 	 */
 	public DailySummaryResult summarizeDay(String accessToken, TimeAnalysisRequest request) {
 		User currentUser = userService.findByAccessToken(accessToken);
@@ -124,7 +129,6 @@ public class DailySummaryService {
 	 *
 	 * @param pages 방문 페이지 목록
 	 * @return 카테고리가 분류된 페이지 목록
-	 * @throws RuntimeException GPT 통신 또는 응답 파싱 중 오류 발생 시
 	 */
 	private List<CategorizedPage> fetchCategoriesFromGPT(List<VisitedPageForTimeDto> pages) {
 		String prompt;
@@ -175,11 +179,11 @@ public class DailySummaryService {
 			String content = Objects.toString(message.get("content"), "").trim();
 
 			List<Map<String, String>> parsedList = objectMapper.readValue(content, List.class);
-			// GPT 응답 개수가 요청보다 적으면 "분류불가" 기본값으로 채움
+			// GPT 응답 개수가 요청보다 적으면 기본값 "분류불가" 대신 기본 카테고리로 채움
 			if (parsedList.size() < pages.size()) {
 				int diff = pages.size() - parsedList.size();
 				for (int i = 0; i < diff; i++) {
-					parsedList.add(Map.of("title", "", "url", "", "category", "분류불가"));
+					parsedList.add(Map.of("title", "", "url", "", "category", DEFAULT_CATEGORY));
 				}
 			} else if (parsedList.size() > pages.size()) {
 				// 응답이 너무 많으면 자르기
@@ -188,7 +192,14 @@ public class DailySummaryService {
 
 			List<CategorizedPage> result = new ArrayList<>();
 			for (int i = 0; i < pages.size(); i++) {
-				String category = parsedList.get(i).getOrDefault("category", "분류불가");
+				String category = parsedList.get(i).getOrDefault("category", DEFAULT_CATEGORY);
+
+				// ★ 유효하지 않은 카테고리 기본값으로 대체 ★
+				if (!VALID_CATEGORIES.contains(category)) {
+					log.warn("잘못된 카테고리 '{}' → 기본값 '{}'으로 대체", category, DEFAULT_CATEGORY);
+					category = DEFAULT_CATEGORY;
+				}
+
 				result.add(new CategorizedPage(pages.get(i), category));
 			}
 			return result;
