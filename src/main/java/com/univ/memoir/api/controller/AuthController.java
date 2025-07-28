@@ -2,11 +2,9 @@ package com.univ.memoir.api.controller;
 
 import com.univ.memoir.api.dto.RefreshTokenRequest;
 import com.univ.memoir.api.dto.res.AuthResponse;
-import com.univ.memoir.config.jwt.CustomOAuth2User;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,11 +16,10 @@ import com.univ.memoir.core.service.AuthService;
 
 import lombok.RequiredArgsConstructor;
 
-import java.io.IOException;
-
 @RestController
-@RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@RequestMapping("/api/auth")
+@Tag(name = "인증", description = "인증 관련 API")
 public class AuthController {
 
     private final AuthService authService;
@@ -31,6 +28,7 @@ public class AuthController {
      * 리프레시 토큰으로 새로운 액세스 토큰 발급
      */
     @PostMapping("/refresh")
+    @Operation(summary = "리프레시 토큰 갱신", description = "리프레시 토큰을 갱신합니다.")
     public ResponseEntity<AuthResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
         AuthResponse response = authService.refreshAccessToken(request.getRefreshToken());
         return ResponseEntity.ok(response);
@@ -40,6 +38,7 @@ public class AuthController {
      * 로그아웃
      */
     @PostMapping("/logout")
+    @Operation(summary = "로그아웃", description = "서비스에서 로그아웃 합니다.")
     public ResponseEntity<Void> logout(@AuthenticationPrincipal CustomUserDetails userDetails) {
         authService.logout(userDetails.getUsername());
         return ResponseEntity.ok().build();
