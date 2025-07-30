@@ -161,7 +161,7 @@ public class TimeService {
     private ActivityStats summarizeActivity(List<CategorizedPage> pages) {
         int totalSeconds = 0;
         Map<String, Integer> categoryToSeconds = new HashMap<>();
-        Map<Integer, Map<String, Integer>> hourlyCategoryMinutes = new TreeMap<>();
+        Map<Integer, Map<String, Integer>> hourlyCategorySeconds = new TreeMap<>();
 
         for (CategorizedPage page : pages) {
             int duration = page.page.getDurationSeconds();
@@ -170,47 +170,44 @@ public class TimeService {
             totalSeconds += duration;
 
             categoryToSeconds.merge(category, duration, Integer::sum);
-
-            distributeTimeAcrossHours(start, duration, category, hourlyCategoryMinutes);
+            distributeTimeAcrossHours(start, duration, category, hourlyCategorySeconds);
         }
 
+        // 콘텐츠 소비 비율 재분배 로직 (초 단위로 조정)
+        int contentConsumptionSeconds = categoryToSeconds.getOrDefault("콘텐츠 소비", 0);
+
+        if (contentConsumptionSeconds > totalSeconds * 0.8) {
+            int redistribute = contentConsumptionSeconds - (int)(totalSeconds * 0.7);
+            contentConsumptionSeconds -= redistribute;
+
+            categoryToSeconds.put("콘텐츠 소비", contentConsumptionSeconds);
+            categoryToSeconds.merge("공부, 학습", redistribute / 2, Integer::sum);
+            categoryToSeconds.merge("뉴스, 정보 탐색", redistribute / 2, Integer::sum);
+        }
+
+        // 📦 최종 분 단위로 변환
         List<CategorySummary> categorySummaries = categoryToSeconds.entrySet().stream()
             .map(e -> new CategorySummary(e.getKey(), e.getValue() / 60))
             .sorted(Comparator.comparing(CategorySummary::getTotalTimeMinutes).reversed())
             .collect(Collectors.toList());
 
-        // 콘텐츠 소비가 80% 이상이면 일정 비율 재분배
-        int totalMinutes = totalSeconds / 60;
-        int contentConsumptionMinutes = categoryToSeconds.getOrDefault("콘텐츠 소비", 0) / 60;
-
-        if (contentConsumptionMinutes > totalMinutes * 0.8) {
-            int redistribute = contentConsumptionMinutes - (int)(totalMinutes * 0.7);
-            contentConsumptionMinutes -= redistribute;
-
-            // 업데이트된 값 다시 반영
-            categoryToSeconds.put("콘텐츠 소비", contentConsumptionMinutes * 60);
-            categoryToSeconds.merge("공부, 학습", (redistribute / 2) * 60, Integer::sum);
-            categoryToSeconds.merge("뉴스, 정보 탐색", (redistribute / 2) * 60, Integer::sum);
-
-            // categorySummaries를 다시 생성 (갱신된 값 반영 위해)
-            categorySummaries = categoryToSeconds.entrySet().stream()
-                .map(e -> new CategorySummary(e.getKey(), e.getValue() / 60))
-                .sorted(Comparator.comparing(CategorySummary::getTotalTimeMinutes).reversed())
-                .collect(Collectors.toList());
-        }
-
-        List<HourlyBreakdown> hourlyBreakdowns = hourlyCategoryMinutes.entrySet().stream()
-            .map(entry -> new HourlyBreakdown(
-                entry.getKey(),
-                entry.getValue().values().stream().mapToInt(Integer::intValue).sum(),
-                entry.getValue()))
+        List<HourlyBreakdown> hourlyBreakdowns = hourlyCategorySeconds.entrySet().stream()
+            .map(entry -> {
+                Map<String, Integer> categoryMinutes = entry.getValue().entrySet().stream()
+                    .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue() / 60 // 초 → 분
+                    ));
+                int hourTotalMinutes = categoryMinutes.values().stream().mapToInt(Integer::intValue).sum();
+                return new HourlyBreakdown(entry.getKey(), hourTotalMinutes, categoryMinutes);
+            })
             .collect(Collectors.toList());
 
         return new ActivityStats(totalSeconds / 60, categorySummaries, hourlyBreakdowns);
     }
 
     private void distributeTimeAcrossHours(long startTimestampMillis, int durationSeconds, String category,
-        Map<Integer, Map<String, Integer>> hourlyCategoryMinutes) {
+        Map<Integer, Map<String, Integer>> hourlyCategorySeconds) {
 
         long currentTimeMillis = startTimestampMillis;
         int remaining = durationSeconds;
@@ -218,20 +215,21 @@ public class TimeService {
         while (remaining > 0) {
             ZonedDateTime current = Instant.ofEpochMilli(currentTimeMillis).atZone(ZoneId.of("Asia/Seoul"));
             int hour = current.getHour();
+
             ZonedDateTime endOfHour = current.withMinute(59).withSecond(59).withNano(999_000_000);
-            long secondsUntilEnd = (endOfHour.toEpochSecond() - current.toEpochSecond()) + 1;
+            long secondsUntilEnd = endOfHour.toEpochSecond() - current.toEpochSecond() + 1;
 
             int segment = (int) Math.min(remaining, secondsUntilEnd);
-            int minutes = (int) Math.ceil(segment / 60.0);
 
-            hourlyCategoryMinutes
+            hourlyCategorySeconds
                 .computeIfAbsent(hour, h -> new HashMap<>())
-                .merge(category, minutes, Integer::sum);
+                .merge(category, segment, Integer::sum);
 
             remaining -= segment;
-            currentTimeMillis += segment * 1000L; // millisecond 단위로 이동
+            currentTimeMillis += segment * 1000L;
         }
     }
+
 
     static class CategorizedPage {
         VisitedPageForTimeDto page;
