@@ -209,16 +209,17 @@ public class TimeService {
         return new ActivityStats(totalSeconds / 60, categorySummaries, hourlyBreakdowns);
     }
 
-    private void distributeTimeAcrossHours(long startTimestamp, int duration, String category,
+    private void distributeTimeAcrossHours(long startTimestampMillis, int durationSeconds, String category,
         Map<Integer, Map<String, Integer>> hourlyCategoryMinutes) {
-        long currentTime = startTimestamp;
-        int remaining = duration;
+
+        long currentTimeMillis = startTimestampMillis;
+        int remaining = durationSeconds;
 
         while (remaining > 0) {
-            ZonedDateTime current = Instant.ofEpochSecond(currentTime).atZone(ZoneId.of("Asia/Seoul"));
+            ZonedDateTime current = Instant.ofEpochMilli(currentTimeMillis).atZone(ZoneId.of("Asia/Seoul"));
             int hour = current.getHour();
-            ZonedDateTime endOfHour = current.withMinute(59).withSecond(59).withNano(0);
-            long secondsUntilEnd = endOfHour.toEpochSecond() - currentTime + 1;
+            ZonedDateTime endOfHour = current.withMinute(59).withSecond(59).withNano(999_000_000);
+            long secondsUntilEnd = (endOfHour.toEpochSecond() - current.toEpochSecond()) + 1;
 
             int segment = (int) Math.min(remaining, secondsUntilEnd);
             int minutes = (int) Math.ceil(segment / 60.0);
@@ -228,7 +229,7 @@ public class TimeService {
                 .merge(category, minutes, Integer::sum);
 
             remaining -= segment;
-            currentTime += segment;
+            currentTimeMillis += segment * 1000L; // millisecond 단위로 이동
         }
     }
 
