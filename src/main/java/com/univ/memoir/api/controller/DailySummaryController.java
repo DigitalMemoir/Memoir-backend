@@ -23,6 +23,7 @@ import com.univ.memoir.core.service.MonthlySummaryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
@@ -33,20 +34,11 @@ public class DailySummaryController {
 	private final DailySummaryService dailySummaryService;
 	private final MonthlySummaryService monthlySummaryService;
 
-	/**
-	 * POST /api/daily/summary
-	 * {
-	 * "date": "2024-06-12",
-	 * "visitedPages": [ ... ]
-	 * }
-	 *
-	 * @param accessToken (예: Authorization 헤더에서 추출해도 됨)
-	 */
 	@PostMapping(value = "/daily", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	@Operation(summary = "일일 요약", description = "일일 요약 페이지를 생성합니다.")
 	public ResponseEntity<SuccessResponse<DailySummaryService.DailySummaryResult>> getDailySummary(
-			@RequestHeader(value = "Authorization", required = false) String accessToken,
-			@RequestBody TimeAnalysisRequest request) {
+			@RequestHeader("Authorization") String accessToken,
+			@RequestBody @Valid TimeAnalysisRequest request) {
 
 		DailySummaryService.DailySummaryResult result = dailySummaryService.summarizeDay(accessToken, request);
 
@@ -55,23 +47,23 @@ public class DailySummaryController {
 		);
 	}
 
-
 	@GetMapping("/daily/popup/{date}")
 	@Operation(summary = "일별 요약 페이지", description = "일별 요약 팝업을 조회합니다.")
 	public ResponseEntity<SuccessResponse<DailyPopupResponse.Data>> getDailyPopup(
-		@PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date
+			@RequestHeader("Authorization") String accessToken,
+			@PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date
 	) {
-		DailyPopupResponse.Data data = monthlySummaryService.getDailyPopup(date);
+		DailyPopupResponse.Data data = monthlySummaryService.getDailyPopup(accessToken, date);
 		return SuccessResponse.of(SuccessCode.DAILY_POPUP_OK, data);
 	}
 
 	@GetMapping("/daily/{date}")
 	@Operation(summary = "일별 요약 페이지", description = "일별 요약 팝업을 조회합니다.")
 	public ResponseEntity<SuccessResponse<DailySummaryService.DailySummaryResult>> getDaily(
-		@PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date
+			@RequestHeader("Authorization") String accessToken,
+			@PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date
 	) {
-		DailySummaryService.DailySummaryResult data = dailySummaryService.getDaily(date);
+		DailySummaryService.DailySummaryResult data = dailySummaryService.getDaily(accessToken, date);
 		return SuccessResponse.of(SuccessCode.DAILY_POPUP_OK, data);
 	}
 }
-

@@ -39,15 +39,16 @@ public class DailySummaryService {
 	private final UserService userService;
 
 	public DailySummaryService(
-            @Qualifier("openAiRestTemplate") RestTemplate restTemplate,
-            ObjectMapper objectMapper,
-            DailySummaryRepository dailySummaryRepository, UserService userService
-    ) {
+			@Qualifier("openAiRestTemplate") RestTemplate restTemplate,
+			ObjectMapper objectMapper,
+			DailySummaryRepository dailySummaryRepository, UserService userService
+	) {
 		this.restTemplate = restTemplate;
 		this.objectMapper = objectMapper;
 		this.dailySummaryRepository = dailySummaryRepository;
-        this.userService = userService;
-    }
+		this.userService = userService;
+	}
+
 	@Value("${openai.model}")
 	private String OPENAI_MODEL;
 
@@ -59,7 +60,7 @@ public class DailySummaryService {
 
 	// --- ★ 카테고리 검증용 상수 추가 ★ ---
 	private static final List<String> VALID_CATEGORIES = List.of(
-		"공부, 학습", "뉴스, 정보 탐색", "콘텐츠 소비", "쇼핑", "업무, 프로젝트"
+			"공부, 학습", "뉴스, 정보 탐색", "콘텐츠 소비", "쇼핑", "업무, 프로젝트"
 	);
 
 	private static final String DEFAULT_CATEGORY = "콘텐츠 소비";
@@ -106,9 +107,10 @@ public class DailySummaryService {
 				)
 		);
 
-		// 5. DB 저장
+		// 5. DB 저장 (User 정보 포함)
 		try {
 			dailySummaryRepository.save(new DailySummary(
+					currentUser,  // ← User 추가
 					localDate,
 					objectMapper.writeValueAsString(result.topKeywords()),
 					objectMapper.writeValueAsString(result.dailyTimeline()),
@@ -125,29 +127,100 @@ public class DailySummaryService {
 	}
 
 	/**
-	 * GPT를 통해 방문 페이지의 카테고리를 분류합니다.
+	 * 특정 날짜의 일일 요약을 조회합니다.
 	 *
-	 * @param pages 방문 페이지 목록
-	 * @return 카테고리가 분류된 페이지 목록
+	 * @param accessToken 사용자 인증 토큰
+	 * @param date 조회할 날짜
+	 * @return 일일 요약 결과
+	 */
+	public DailySummaryResult getDaily(String accessToken, LocalDate date) {
+		User user = userService.findByAccessToken(accessToken);
+
+		if (user == null) {
+			throw new UserNotFoundException(ErrorCode.USER_NOT_FOUND);
+		}
+
+		Optional<DailySummary> optionalData = dailySummaryRepository.findByUserAndDate(user, date);
+
+		if (optionalData.isEmpty()) {
+			// 데이터 없을 경우, 빈 객체 반환
+			return new DailySummaryResult(
+					date.toString(),
+					Collections.emptyList(),
+					Collections.emptyList(),
+					Collections.emptyList(),
+					new DailySummaryResult.ActivityStats(0, Collections.emptyList())
+			);
+		}
+
+		DailySummary data = optionalData.get();
+
+		try {
+			List<DailySummaryResult.TopKeyword> topKeywords = objectMapper.readValue(
+					data.getTopKeywordsJson(),
+					objectMapper.getTypeFactory().constructCollectionType(
+							List.class, DailySummaryResult.TopKeyword.class
+					)
+			);
+
+			List<DailySummaryResult.DailyTimelineEntry> dailyTimeline = objectMapper.readValue(
+					data.getTimelineJson(),
+					objectMapper.getTypeFactory().constructCollectionType(
+							List.class, DailySummaryResult.DailyTimelineEntry.class
+					)
+			);
+
+			List<String> summaryText = objectMapper.readValue(
+					data.getSummaryTextJson(),
+					objectMapper.getTypeFactory().constructCollectionType(
+							List.class, String.class
+					)
+			);
+
+			List<DailySummaryResult.ActivityProportion> activityProportions = objectMapper.readValue(
+					data.getActivityProportionsJson(),
+					objectMapper.getTypeFactory().constructCollectionType(
+							List.class, DailySummaryResult.ActivityProportion.class
+					)
+			);
+
+			return new DailySummaryResult(
+					date.toString(),
+					topKeywords,
+					dailyTimeline,
+					summaryText,
+					new DailySummaryResult.ActivityStats(
+							data.getTotalUsageMinutes(),
+							activityProportions
+					)
+			);
+		} catch (JsonProcessingException e) {
+			log.error("일일 요약 데이터 역직렬화 실패", e);
+			throw new RuntimeException("일일 요약 데이터 역직렬화 실패", e);
+		}
+	}
+
+	/**
+	 * GPT를 통해 방문 페이지의 카테고리를 분류합니다.
 	 */
 	private List<CategorizedPage> fetchCategoriesFromGPT(List<VisitedPageForTimeDto> pages) {
 		String prompt;
 		try {
 			String pagesJson = objectMapper.writeValueAsString(pages);
 			prompt = """
-                    아래는 사용자의 방문 기록입니다. 각 페이지의 제목과 URL을 참고하여 해당 페이지의 카테고리를 분류하세요.
-                    카테고리는 다음 중 하나로만 정하세요:
-                    '공부, 학습', '뉴스, 정보 탐색', '콘텐츠 소비', '쇼핑', '업무, 프로젝트'
+                   아래는 사용자의 방문 기록입니다. 각 페이지의 제목과 URL을 참고하여 해당 페이지의 카테고리를 분류하세요.
+                   카테고리는 다음 중 하나로만 정하세요:
+                   '공부, 학습', '뉴스, 정보 탐색', '콘텐츠 소비', '쇼핑', '업무, 프로젝트'
 
-                    다음 형식으로만 응답하세요 (JSON strict array):
-                    [
-                      { "title": "...", "url": "...", "category": "..." },
-                      ...
-                    ]
+                   다음 형식으로만 응답하세요 (JSON strict array):
+                   [
+                     { "title": "...", "url": "...", "category": "..." },
+                     ...
+                   ]
 
-                    방문 기록:
-                    %s
-                    """.formatted(pagesJson);
+                   방문 기록:
+                   %s
+                   """.formatted(pagesJson);
 		} catch (JsonProcessingException e) {
 			log.error("페이지 목록 JSON 직렬화 실패", e);
 			throw new RuntimeException("페이지 목록 JSON 직렬화 실패", e);
@@ -163,7 +236,6 @@ public class DailySummaryService {
 		);
 
 		try {
-			// RestTemplate을 이용한 동기 HTTP POST 요청
 			Map<String, Object> response = restTemplate.postForObject(
 					OPENAI_BASE_URL + OPENAI_URI,
 					requestBody,
@@ -179,14 +251,14 @@ public class DailySummaryService {
 			String content = Objects.toString(message.get("content"), "").trim();
 
 			List<Map<String, String>> parsedList = objectMapper.readValue(content, List.class);
-			// GPT 응답 개수가 요청보다 적으면 기본값 "분류불가" 대신 기본 카테고리로 채움
+
+			// GPT 응답 개수 조정
 			if (parsedList.size() < pages.size()) {
 				int diff = pages.size() - parsedList.size();
 				for (int i = 0; i < diff; i++) {
 					parsedList.add(Map.of("title", "", "url", "", "category", DEFAULT_CATEGORY));
 				}
 			} else if (parsedList.size() > pages.size()) {
-				// 응답이 너무 많으면 자르기
 				parsedList = parsedList.subList(0, pages.size());
 			}
 
@@ -211,9 +283,6 @@ public class DailySummaryService {
 
 	/**
 	 * 방문 페이지 데이터로부터 일일 활동 통계를 계산합니다.
-	 *
-	 * @param pages 카테고리가 분류된 페이지 목록
-	 * @return 일일 활동 통계
 	 */
 	private DailyActivityStats calculateStats(List<CategorizedPage> pages) {
 		int totalSeconds = 0;
@@ -230,11 +299,6 @@ public class DailySummaryService {
 
 	/**
 	 * GPT를 통해 일일 활동 요약을 생성합니다.
-	 *
-	 * @param date 요약을 생성할 날짜
-	 * @param pages 카테고리가 분류된 페이지 목록
-	 * @return GPT로부터 생성된 요약 정보
-	 * @throws RuntimeException GPT 통신 또는 응답 파싱 중 오류 발생 시
 	 */
 	private GptSummary fetchDailySummaryFromGPT(String date, List<CategorizedPage> pages) {
 		StringBuilder visitSummary = new StringBuilder();
@@ -243,23 +307,23 @@ public class DailySummaryService {
 		}
 
 		String prompt = """
-            당신은 디지털 활동 요약 전문가입니다.
-            사용자가 %s 하루 동안 다음과 같은 인터넷 방문 기록과 카테고리 정보를 보냈습니다:
+           당신은 디지털 활동 요약 전문가입니다.
+           사용자가 %s 하루 동안 다음과 같은 인터넷 방문 기록과 카테고리 정보를 보냈습니다:
 
-            %s
+           %s
 
-            위 데이터를 참고해 다음을 작성해주세요.
-            1) 오늘의 키워드 상위 3개 (내림차순, { "keyword": "...", "frequency": 숫자 } JSON 배열 형식)
-            2) 시간대별 활동 타임라인 (ex: "09:00 - 뉴스 읽기")
-            3) 3줄짜리 전체 활동 요약 문장 (한국어)
+           위 데이터를 참고해 다음을 작성해주세요.
+           1) 오늘의 키워드 상위 3개 (내림차순, { "keyword": "...", "frequency": 숫자 } JSON 배열 형식)
+           2) 시간대별 활동 타임라인 (ex: "09:00 - 뉴스 읽기")
+           3) 3줄짜리 전체 활동 요약 문장 (한국어)
 
-            JSON 형식으로 아래 필드를 포함하여 응답하세요:
-            {
-              "topKeywords": [ { "keyword": "...", "frequency": 숫자 }, ... ],
-              "dailyTimeline": [ { "time": "HH:mm", "description": "..." }, ... ],
-              "summaryText": [ "문장1", "문장2", "문장3" ]
-            }
-            """.formatted(date, visitSummary);
+           JSON 형식으로 아래 필드를 포함하여 응답하세요:
+           {
+             "topKeywords": [ { "keyword": "...", "frequency": 숫자 }, ... ],
+             "dailyTimeline": [ { "time": "HH:mm", "description": "..." }, ... ],
+             "summaryText": [ "문장1", "문장2", "문장3" ]
+           }
+           """.formatted(date, visitSummary);
 
 		Map<String, Object> requestBody = Map.of(
 				"model", OPENAI_MODEL,
@@ -329,68 +393,7 @@ public class DailySummaryService {
 		}
 	}
 
-	public DailySummaryResult getDaily(LocalDate date) {
-		Optional<DailySummary> optionalData = dailySummaryRepository.findByDate(date);
-
-		if (optionalData.isEmpty()) {
-			// 데이터 없을 경우, 빈 객체 반환하거나 예외 처리
-			return new DailySummaryResult(
-				date.toString(),
-				Collections.emptyList(),
-				Collections.emptyList(),
-				Collections.emptyList(),
-				new DailySummaryResult.ActivityStats(0, Collections.emptyList())
-			);
-		}
-
-		DailySummary data = optionalData.get();
-
-		try {
-			List<DailySummaryResult.TopKeyword> topKeywords = objectMapper.readValue(
-				data.getTopKeywordsJson(),
-				objectMapper.getTypeFactory().constructCollectionType(
-					List.class, DailySummaryResult.TopKeyword.class
-				)
-			);
-
-			List<DailySummaryResult.DailyTimelineEntry> dailyTimeline = objectMapper.readValue(
-				data.getTimelineJson(),
-				objectMapper.getTypeFactory().constructCollectionType(
-					List.class, DailySummaryResult.DailyTimelineEntry.class
-				)
-			);
-
-			List<String> summaryText = objectMapper.readValue(
-				data.getSummaryTextJson(),
-				objectMapper.getTypeFactory().constructCollectionType(
-					List.class, String.class
-				)
-			);
-
-			List<DailySummaryResult.ActivityProportion> activityProportions = objectMapper.readValue(
-				data.getActivityProportionsJson(),
-				objectMapper.getTypeFactory().constructCollectionType(
-					List.class, DailySummaryResult.ActivityProportion.class
-				)
-			);
-
-			return new DailySummaryResult(
-				date.toString(),
-				topKeywords,
-				dailyTimeline,
-				summaryText,
-				new DailySummaryResult.ActivityStats(
-					data.getTotalUsageMinutes(),
-					activityProportions
-				)
-			);
-		} catch (JsonProcessingException e) {
-			log.error("일일 요약 데이터 역직렬화 실패", e);
-			throw new RuntimeException("일일 요약 데이터 역직렬화 실패", e);
-		}
-	}
-
-	// 내부 클래스들은 변경 없음
+	// 내부 클래스들
 	private static class CategorizedPage {
 		VisitedPageForTimeDto page;
 		String category;
@@ -415,7 +418,6 @@ public class DailySummaryService {
 			if (totalUsageMinutes == 0) return list;
 
 			for (Map.Entry<String, Integer> e : categorySeconds.entrySet()) {
-				// 초(seconds)를 분(minutes)으로 변환 후 백분율 계산
 				int percent = (int) Math.round((e.getValue() / 60.0) * 100 / totalUsageMinutes);
 				list.add(new DailySummaryResult.ActivityProportion(e.getKey(), percent));
 			}

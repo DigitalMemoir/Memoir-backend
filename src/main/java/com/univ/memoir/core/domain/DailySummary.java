@@ -2,12 +2,7 @@ package com.univ.memoir.core.domain;
 
 import java.time.LocalDate;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,6 +16,10 @@ public class DailySummary {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;
 
 	private LocalDate date;
 
@@ -38,12 +37,13 @@ public class DailySummary {
 	@Column(columnDefinition = "TEXT")
 	private String activityProportionsJson;
 
-	public DailySummary(LocalDate date,
-		String topKeywordsJson,
-		String timelineJson,
-		String summaryTextJson,
-		int totalUsageMinutes,
-		String activityProportionsJson) {
+	public DailySummary(User user, LocalDate date,
+						String topKeywordsJson,
+						String timelineJson,
+						String summaryTextJson,
+						int totalUsageMinutes,
+						String activityProportionsJson) {
+		this.user = user;
 		this.date = date;
 		this.topKeywordsJson = topKeywordsJson;
 		this.timelineJson = timelineJson;
