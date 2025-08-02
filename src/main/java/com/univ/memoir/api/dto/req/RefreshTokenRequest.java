@@ -1,4 +1,4 @@
-package com.univ.memoir.api.dto;
+package com.univ.memoir.api.dto.req;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
