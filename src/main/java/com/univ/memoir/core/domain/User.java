@@ -45,8 +45,8 @@ public class User {
     @Column(name = "profile_url", length = 2048)
     private String profileUrl;
 
-    @Column(name = "refresh_token")
-    private String refreshToken;
+    @Column(name = "access_token")
+    private String accessToken;
 
     @Column(length = 1, nullable = false)
     private String status = "N"; // 'N' = 정상 / 'Y' = 탈퇴
@@ -67,12 +67,12 @@ public class User {
     private Set<String> bookmarkUrls = new HashSet<>();
 
     @Builder
-    public User(String googleId, String email, String name, String profileUrl, String refreshToken) {
+    public User(String googleId, String email, String name, String profileUrl, String accessToken) {
         this.googleId = googleId;
         this.email = email;
         this.name = name;
         this.profileUrl = profileUrl;
-        this.refreshToken = refreshToken;
+        this.accessToken = accessToken;
         this.status = "N";
     }
 
@@ -84,13 +84,13 @@ public class User {
         this.profileUrl = profileUrl;
     }
 
-    public void updateRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
+    public void updateAccessToken(String accessToken) {
+        this.accessToken = accessToken;
     }
 
     public void withdraw() {
         this.status = "Y";
-        this.refreshToken = null;
+        this.accessToken = null; // 탈퇴시 accessToken 삭제
     }
 
     public boolean isActive() {

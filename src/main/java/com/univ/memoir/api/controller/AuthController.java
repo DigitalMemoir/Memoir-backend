@@ -1,6 +1,6 @@
 package com.univ.memoir.api.controller;
 
-import com.univ.memoir.api.dto.RefreshTokenRequest;
+import com.univ.memoir.api.dto.req.RefreshTokenRequest;
 import com.univ.memoir.api.dto.res.AuthResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
