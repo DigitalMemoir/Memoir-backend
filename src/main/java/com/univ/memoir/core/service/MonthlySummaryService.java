@@ -13,7 +13,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.univ.memoir.api.dto.res.DailyPopupResponse;
 import com.univ.memoir.api.dto.res.MonthlySummaryResponse;
+import com.univ.memoir.api.exception.codes.ErrorCode;
+import com.univ.memoir.api.exception.customException.UserNotFoundException;
 import com.univ.memoir.core.domain.DailySummary;
+import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.DailySummaryRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -25,24 +28,31 @@ public class MonthlySummaryService {
 
 	private final DailySummaryRepository dailySummaryRepository;
 	private final ObjectMapper objectMapper;
+	private final UserService userService;
 
-	public MonthlySummaryResponse.Data getMonthlySummary(YearMonth yearMonth) {
+	public MonthlySummaryResponse.Data getMonthlySummary(String accessToken, YearMonth yearMonth) {
+		User user = userService.findByAccessToken(accessToken);
+
+		if (user == null) {
+			throw new UserNotFoundException(ErrorCode.USER_NOT_FOUND);
+		}
+
 		LocalDate start = yearMonth.atDay(1);
 		LocalDate end = yearMonth.atEndOfMonth();
 
-		List<DailySummary> summaries = dailySummaryRepository.findAllByDateBetween(start, end);
+		List<DailySummary> summaries = dailySummaryRepository.findAllByUserAndDateBetween(user, start, end);
 
 		List<MonthlySummaryResponse.CalendarEntry> entries = summaries.stream()
-			.map(summary -> {
-				String title = extractTopKeyword(summary.getTopKeywordsJson());
-				return new MonthlySummaryResponse.CalendarEntry(summary.getDate().toString(), title);
-			})
-			.toList();
+				.map(summary -> {
+					String title = extractTopKeyword(summary.getTopKeywordsJson());
+					return new MonthlySummaryResponse.CalendarEntry(summary.getDate().toString(), title);
+				})
+				.toList();
 
 		return new MonthlySummaryResponse.Data(
-			yearMonth.getYear(),
-			yearMonth.getMonthValue(),
-			entries
+				yearMonth.getYear(),
+				yearMonth.getMonthValue(),
+				entries
 		);
 	}
 
@@ -58,12 +68,21 @@ public class MonthlySummaryService {
 		return "기록 없음";
 	}
 
-	public DailyPopupResponse.Data getDailyPopup(LocalDate date) {
-		DailySummary summary = dailySummaryRepository.findByDate(date).orElseThrow(() -> new EntityNotFoundException("해당 날짜의 요약이 존재하지 않습니다."));
+	public DailyPopupResponse.Data getDailyPopup(String accessToken, LocalDate date) {
+		User user = userService.findByAccessToken(accessToken);
+
+		if (user == null) {
+			throw new UserNotFoundException(ErrorCode.USER_NOT_FOUND);
+		}
+
+		DailySummary summary = dailySummaryRepository.findByUserAndDate(user, date)
+				.orElseThrow(() -> new EntityNotFoundException("해당 날짜의 요약이 존재하지 않습니다."));
+
 		List<String> summaryTexts = parseSummaryTextJson(summary.getSummaryTextJson());
 
 		return new DailyPopupResponse.Data(date.toString(), summaryTexts);
 	}
+
 	private List<String> parseSummaryTextJson(String json) {
 		try {
 			return objectMapper.readValue(json, new TypeReference<List<String>>() {});

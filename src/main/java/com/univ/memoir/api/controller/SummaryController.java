@@ -4,10 +4,7 @@ import java.time.YearMonth;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.univ.memoir.api.dto.res.MonthlySummaryResponse;
 import com.univ.memoir.api.exception.codes.SuccessCode;
@@ -29,9 +26,10 @@ public class SummaryController {
 	@GetMapping("/monthly/{date}")
 	@Operation(summary = "월별 요약 페이지", description = "월별 요약 페이지를 조회합니다.")
 	public ResponseEntity<SuccessResponse<MonthlySummaryResponse.Data>> getMonthlySummary(
-		@PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth
+			@RequestHeader("Authorization") String accessToken,
+			@PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth
 	) {
-		MonthlySummaryResponse.Data data = monthlySummaryService.getMonthlySummary(yearMonth);
+		MonthlySummaryResponse.Data data = monthlySummaryService.getMonthlySummary(accessToken ,yearMonth);
 		return SuccessResponse.of(SuccessCode.MONTHLY_SUMMARY_OK, data);
 	}
 
