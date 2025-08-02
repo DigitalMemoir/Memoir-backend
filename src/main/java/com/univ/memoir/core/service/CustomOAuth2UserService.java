@@ -8,9 +8,9 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.univ.memoir.config.jwt.CustomOAuth2User;
-import com.univ.memoir.config.jwt.JwtProvider;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.UserRepository;
 
@@ -18,10 +18,10 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
     private final UserRepository userRepository;
-    private final JwtProvider jwtProvider;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -32,11 +32,9 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         String name = oAuth2User.getAttribute("name");
         String picture = oAuth2User.getAttribute("picture");
 
-        if (googleId == null) {
-            throw new OAuth2AuthenticationException("Google 계정 정보를 가져오지 못했습니다.");
+        if (googleId == null || email == null) {
+            throw new OAuth2AuthenticationException("필수 구글 계정 정보가 누락되었습니다.");
         }
-
-        String refreshToken = jwtProvider.createAccessToken(email);
 
         User user = userRepository.findByGoogleId(googleId).orElse(null);
         boolean isNewUser = false;
@@ -47,7 +45,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                     .email(email)
                     .name(name)
                     .profileUrl(picture)
-                    .refreshToken(refreshToken)
+                    .accessToken(null) // 나중에 핸들러에서 설정
                     .build();
             userRepository.save(user);
             isNewUser = true;
@@ -60,10 +58,6 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             }
             if (!picture.equals(user.getProfileUrl())) {
                 user.updateProfileUrl(picture);
-                changed = true;
-            }
-            if (!refreshToken.equals(user.getRefreshToken())) {
-                user.updateRefreshToken(refreshToken);
                 changed = true;
             }
 
