@@ -43,11 +43,20 @@ public class MonthlySummaryService {
 		List<DailySummary> summaries = dailySummaryRepository.findAllByUserAndDateBetween(user, start, end);
 
 		List<MonthlySummaryResponse.CalendarEntry> entries = summaries.stream()
-				.map(summary -> {
-					String title = extractTopKeyword(summary.getTopKeywordsJson());
-					return new MonthlySummaryResponse.CalendarEntry(summary.getDate().toString(), title);
-				})
-				.toList();
+			.collect(
+				java.util.stream.Collectors.toMap(
+					summary -> summary.getDate().toString(), // key: 날짜 문자열
+					summary -> {
+						String title = extractTopKeyword(summary.getTopKeywordsJson());
+						return new MonthlySummaryResponse.CalendarEntry(summary.getDate().toString(), title);
+					},
+					(existing, replacement) -> existing // 중복일 경우 existing 값을 제공
+				)
+			)
+			.values()
+			.stream()
+			.toList();
+
 
 		return new MonthlySummaryResponse.Data(
 				yearMonth.getYear(),
