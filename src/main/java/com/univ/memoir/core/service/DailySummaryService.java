@@ -1,8 +1,12 @@
 package com.univ.memoir.core.service;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -303,7 +307,11 @@ public class DailySummaryService {
 	private GptSummary fetchDailySummaryFromGPT(String date, List<CategorizedPage> pages) {
 		StringBuilder visitSummary = new StringBuilder();
 		for (CategorizedPage cp : pages) {
-			visitSummary.append(String.format("- 제목: %s, 카테고리: %s%n", cp.page.getTitle(), cp.category));
+			ZonedDateTime visitTime = Instant.ofEpochMilli(cp.page.getStartTimestamp())
+				.atZone(ZoneId.of("Asia/Seoul"));
+			String timeStr = visitTime.toLocalTime().withSecond(0).withNano(0).toString(); // HH:mm
+
+			visitSummary.append(String.format("- 시각: %s, 제목: %s, 카테고리: %s%n", timeStr, cp.page.getTitle(), cp.category));
 		}
 
 		String prompt = """
@@ -314,7 +322,7 @@ public class DailySummaryService {
 
            위 데이터를 참고해 다음을 작성해주세요.
            1) 오늘의 키워드 상위 3개 (내림차순, { "keyword": "...", "frequency": 숫자 } JSON 배열 형식)
-           2) 시간대별 활동 타임라인 (ex: "09:00 - 뉴스 읽기")
+           2) 시간대별 활동 타임라인 3줄 요약 (ex: "09:00 - 뉴스 읽기")
            3) 3줄짜리 전체 활동 요약 문장 (한국어)
 
            JSON 형식으로 아래 필드를 포함하여 응답하세요:
@@ -382,6 +390,7 @@ public class DailySummaryService {
 					.map(t -> new DailySummaryResult.DailyTimelineEntry(
 							Objects.toString(t.get("time"), ""),
 							Objects.toString(t.get("description"), "")))
+					.sorted(Comparator.comparing(DailySummaryResult.DailyTimelineEntry::time)) // 시간 순 정렬
 					.collect(Collectors.toList());
 
 			List<String> summaryText = (List<String>) parsed.getOrDefault("summaryText", Collections.emptyList());
