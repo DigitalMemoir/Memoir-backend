@@ -70,13 +70,6 @@ public class TimeService {
 
         LocalDate requestDate = LocalDate.parse(request.getDate());
 
-        // 1. 캐시된 데이터 확인
-        Optional<TimeAnalysisData> cached = timeAnalysisRepository.findByUserAndDate(currentUser, requestDate);
-        if (cached.isPresent()) {
-            log.info("Cache hit - returning saved data for user: {}, date: {}", currentUser.getId(), requestDate);
-            return convertToActivityStats(cached.get());
-        }
-
         // 2. 캐시 미스 - GPT API 호출 후 저장
         log.info("Cache miss - calling GPT API for user: {}, date: {}", currentUser.getId(), requestDate);
         List<VisitedPageForTimeDto> pages = request.getVisitedPages();
