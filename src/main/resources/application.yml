@@ -1,0 +1,61 @@
+server:
+  port: ${SERVER_PORT}
+
+spring:
+  profiles:
+    active: ${SPRING_PROFILE}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: ${BASE_URL}/login/oauth2/code/{registrationId}
+            scope:
+              - email
+              - profile
+    jwt:
+      secret: ${JWT_SECRET}
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO}
+    show-sql: ${SHOW_SQL}
+
+  mvc:
+    async:
+      request-timeout: 60000
+
+oauth2:
+  redirect-uri:
+    githubpages: ${OAUTH2_GITHUBPAGES_REDIRECT_URI}
+
+openai:
+  api:
+    key: ${OPENAI_API_KEY}
+    base-url: ${OPENAI_BASE_URL}
+  model: ${OPENAI_MODEL}
+  uri: ${OPENAI_URI}
+  assistant:
+    id: ${OPENAI_ASSISTANT_ID}
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT}
+    com.univ.memoir: ${LOG_LEVEL_APP}
+  file:
+    name: ${LOG_FILE_PATH:logs/application.log}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%5level) %cyan(%logger{30}) - %magenta(%msg) [traceId=%X{traceId}]%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{30} - %msg [traceId=%X{traceId}]%n"
+  logback:
+    rolling policy:
+      max-history: 30
