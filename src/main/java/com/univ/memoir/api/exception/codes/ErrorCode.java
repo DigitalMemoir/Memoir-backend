@@ -30,7 +30,7 @@ public enum ErrorCode {
     /**
      *  404 Not Found
      */
-    NOT_FOUND(404, HttpStatus.FOUND, "요청한 리소스를 찾을 수 없습니다"),
+    NOT_FOUND(404, HttpStatus.NOT_FOUND, "요청한 리소스를 찾을 수 없습니다"),
     USER_NOT_FOUND(404, HttpStatus.NOT_FOUND, "요청한 유저를 찾을 수 없습니다. 회원가입을 확인하세요."),
     USER_NOT_FOUND_BY_ID(404, HttpStatus.NOT_FOUND, "해당 ID를 가진 유저를 찾을 수 없습니다."),
     NOT_SIGN_IN_GOOGLE_ID(404, HttpStatus.NOT_FOUND, "회원가입되지 않은 구글 계정입니다. 회원가입을 진행해 주세요."),
