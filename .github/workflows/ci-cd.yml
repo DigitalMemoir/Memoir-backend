@@ -1,0 +1,114 @@
+name: Memoir CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: JDK 17 설정
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Gradle 빌드
+        run: |
+          chmod +x gradlew
+          ./gradlew clean build -x test
+
+      - name: AWS 자격증명 설정
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Amazon ECR 로그인
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Docker Buildx 설정
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker 이미지 빌드 및 ECR 푸시
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "🔨 Docker 이미지 빌드 중..."
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            --push \
+            --no-cache \
+            .
+          echo "✅ Docker 이미지를 ECR 푸시 성공"
+
+      - name: EC2 배포
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          envs: ECR_REGISTRY,ECR_REPOSITORY,AWS_REGION,ENV_FILE
+          script: |
+            echo "✅ SSH 접속 성공"
+            
+            echo "🔐 ECR 로그인 중..."
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+            
+            echo "🛑 기존 컨테이너 중지 중..."
+            docker stop memoir-app || true
+            docker rm memoir-app || true
+            
+            echo "⬇️ 최신 Docker 이미지 다운로드 중..."
+            docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest
+            
+            # 필요한 디렉토리 생성
+            echo "📁 디렉토리 생성 중..."
+            mkdir -p /home/ubuntu/memoir-logs
+            mkdir -p /home/ubuntu/memoir
+            
+            echo "📝 환경변수 파일 생성 중..."
+            cat > /home/ubuntu/memoir/.env << 'EOF'
+            $ENV_FILE
+            EOF
+            
+            echo "🚀 새 컨테이너 시작 중..."
+            docker run -d \
+              --name memoir-app \
+              -p 8080:8080 \
+              -v /home/ubuntu/memoir-logs:/logs \
+              --env-file /home/ubuntu/memoir/.env \
+              --restart unless-stopped \
+              $ECR_REGISTRY/$ECR_REPOSITORY:latest
+            
+            echo "🔒 환경변수 파일 삭제 중..."
+            rm -f /home/ubuntu/memoir/.env
+            
+            echo "📊 컨테이너 상태 확인..."
+            docker ps | grep memoir-app
+            
+            echo "📋 애플리케이션 로그:"
+            docker logs --tail=30 memoir-app
+            
+            echo "🧹 사용하지 않는 Docker 리소스 정리 중..."
+            docker system prune -af --volumes
+            
+            echo "✅ 배포 완료"
