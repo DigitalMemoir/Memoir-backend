@@ -27,6 +27,10 @@ bootJar {
 	archiveFileName = 'app.jar'
 }
 
+jar {
+	enabled = false
+}
+
 dependencies {
 	// Spring Boot 기본
 	implementation 'org.springframework.boot:spring-boot-starter'

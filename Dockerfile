@@ -9,7 +9,7 @@ RUN apk add --no-cache tzdata \
 
 RUN mkdir -p /logs
 
-COPY build/libs/*.jar app.jar
+COPY build/libs/app.jar app.jar
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser

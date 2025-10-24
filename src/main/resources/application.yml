@@ -49,13 +49,7 @@ openai:
 
 logging:
   level:
-    root: ${LOG_LEVEL_ROOT}
-    com.univ.memoir: ${LOG_LEVEL_APP}
-  file:
-    name: ${LOG_FILE_PATH:logs/application.log}
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.univ.memoir: ${LOG_LEVEL_APP:DEBUG}
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%5level) %cyan(%logger{30}) - %magenta(%msg) [traceId=%X{traceId}]%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{30} - %msg [traceId=%X{traceId}]%n"
-  logback:
-    rolling policy:
-      max-history: 30

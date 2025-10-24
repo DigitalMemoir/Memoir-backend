@@ -80,21 +80,17 @@ jobs:
             echo "⬇️ 최신 Docker 이미지 다운로드 중..."
             docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest
             
-            # 필요한 디렉토리 생성
             echo "📁 디렉토리 생성 중..."
             mkdir -p /home/ubuntu/memoir-logs
             mkdir -p /home/ubuntu/memoir
             
             echo "📝 환경변수 파일 생성 중..."
-            cat > /home/ubuntu/memoir/.env << 'EOF'
-            $ENV_FILE
-            EOF
+            echo "$ENV_FILE" > /home/ubuntu/memoir/.env
             
             echo "🚀 새 컨테이너 시작 중..."
             docker run -d \
               --name memoir-app \
               -p 8080:8080 \
-              -v /home/ubuntu/memoir-logs:/logs \
               --env-file /home/ubuntu/memoir/.env \
               --restart unless-stopped \
               $ECR_REGISTRY/$ECR_REPOSITORY:latest
