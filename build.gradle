@@ -23,6 +23,10 @@ repositories {
 	mavenCentral()
 }
 
+bootJar {
+	archiveFileName = 'app.jar'
+}
+
 dependencies {
 	// Spring Boot 기본
 	implementation 'org.springframework.boot:spring-boot-starter'
