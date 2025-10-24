@@ -61,21 +61,15 @@ public class SecurityConfig {
                 )
 
                 .oauth2Login(oauth2 -> {
-                    if (!isDevProfile()) {
-                        oauth2
-                                .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-                                .successHandler(oAuth2SuccessHandler)
-                                .failureHandler((request, response, exception) -> response.sendRedirect("/login?error"));
-                    }
+                    oauth2
+                            .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                            .successHandler(oAuth2SuccessHandler)
+                            .failureHandler((request, response, exception) -> response.sendRedirect("/login?error"));
                 })
 
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    private boolean isDevProfile() {
-        return env.acceptsProfiles("dev");
     }
 
     @Bean

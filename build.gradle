@@ -31,6 +31,11 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 
+	// 로깅
+	implementation 'org.springframework.boot:spring-boot-starter-logging'
+	implementation 'ch.qos.logback:logback-classic'
+	implementation 'org.springframework.boot:spring-boot-starter-aop'
+
 	// OAuth2 Client
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
