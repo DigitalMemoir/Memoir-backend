@@ -63,12 +63,14 @@ public class LoggingAspect {
 
     /**
      * Service/Repository 메서드 로깅
+     * - @Loggable이 붙은 메서드는 제외 (중복 방지)
      * - 느린 메서드(1초 이상)만 경고 로깅
      * - 에러는 항상 로깅
      * - 정상 동작은 로깅하지 않음
      */
-    @Around("@within(org.springframework.stereotype.Service) || " +
-            "@within(org.springframework.stereotype.Repository)")
+    @Around("(@within(org.springframework.stereotype.Service) || " +
+            "@within(org.springframework.stereotype.Repository)) && " +
+            "!@annotation(com.univ.memoir.core.aop.Loggable)")  // ← 이 부분 추가!
     public Object logServiceAndRepository(ProceedingJoinPoint joinPoint) throws Throwable {
         String className = joinPoint.getTarget().getClass().getSimpleName();
         String methodName = joinPoint.getSignature().getName();
