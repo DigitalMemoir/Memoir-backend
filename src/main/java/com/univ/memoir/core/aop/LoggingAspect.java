@@ -116,15 +116,18 @@ public class LoggingAspect {
                         return "null";
                     }
 
-                    String stringArg = arg.toString();
-
-                    if (stringArg.length() > MAX_STRING_LENGTH) {
-                        stringArg = stringArg.substring(0, MAX_STRING_LENGTH) + "...";
+                    // String 타입만 상세 로깅 + 마스킹
+                    String stringArg;
+                    if (arg instanceof String) {
+                        stringArg = SensitiveDataMasker.mask((String) arg);
+                    } else {
+                        // 객체는 클래스명만 로깅 (toString() 호출 방지)
+                        stringArg = arg.getClass().getSimpleName();
                     }
 
-                    // String 타입만 마스킹 (성능 최적화)
-                    if (arg instanceof String) {
-                        return SensitiveDataMasker.mask(stringArg);
+                    // 길이 제한
+                    if (stringArg.length() > MAX_STRING_LENGTH) {
+                        stringArg = stringArg.substring(0, MAX_STRING_LENGTH) + "...";
                     }
 
                     return stringArg;
@@ -142,15 +145,18 @@ public class LoggingAspect {
             return "null";
         }
 
-        String stringResult = result.toString();
-
-        if (stringResult.length() > MAX_STRING_LENGTH) {
-            stringResult = stringResult.substring(0, MAX_STRING_LENGTH) + "...";
+        // String 타입만 상세 로깅 + 마스킹
+        String stringResult;
+        if (result instanceof String) {
+            stringResult = SensitiveDataMasker.mask((String) result);
+        } else {
+            // 객체는 클래스명만 로깅 (toString() 호출 방지)
+            stringResult = result.getClass().getSimpleName();
         }
 
-        // String 타입만 마스킹 (최적화)
-        if (result instanceof String) {
-            return SensitiveDataMasker.mask(stringResult);
+        // 길이 제한
+        if (stringResult.length() > MAX_STRING_LENGTH) {
+            stringResult = stringResult.substring(0, MAX_STRING_LENGTH) + "...";
         }
 
         return stringResult;
