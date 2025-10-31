@@ -2,18 +2,13 @@ package com.univ.memoir.api.controller;
 
 import java.util.Set;
 
+import com.univ.memoir.api.dto.req.bookmark.BookmarkUpdateRequestDto;
+import com.univ.memoir.api.exception.codes.SuccessCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 import com.univ.memoir.api.dto.req.bookmark.BookmarkRequestDto;
-import com.univ.memoir.api.dto.req.bookmark.BookmarkUpdateRequestDto;
 import com.univ.memoir.api.exception.responses.SuccessResponse;
 import com.univ.memoir.core.service.BookmarkService;
 
@@ -32,36 +27,36 @@ public class BookmarkController {
     @GetMapping
     @Operation(summary = "즐겨찾기 조회", description = "사용자의 즐겨찾기 목록을 조회합니다.")
     public ResponseEntity<SuccessResponse<Set<String>>> getBookmarks(
-            @RequestHeader(name = "Authorization") String accessToken) {
-        SuccessResponse<Set<String>> response = bookmarkService.getBookmarks(accessToken);
-        return ResponseEntity.ok(response);
+            @AuthenticationPrincipal String email) {
+        Set<String> bookmarks = bookmarkService.getBookmarks(email);
+        return SuccessResponse.of(SuccessCode.BOOKMARK_RETRIEVE_SUCCESS, bookmarks);
     }
-
 
     @PostMapping
     @Operation(summary = "즐겨찾기 추가", description = "즐겨찾기를 추가합니다.")
-    public ResponseEntity<SuccessResponse<String>> addBookmark(
-            @RequestHeader("Authorization") String accessToken,
+    public ResponseEntity<SuccessResponse<Void>> addBookmark(
+            @AuthenticationPrincipal String email,
             @RequestBody BookmarkRequestDto requestDto) {
-        SuccessResponse<String> response = bookmarkService.addBookmark(accessToken, requestDto);
-        return ResponseEntity.ok(response);
+
+        bookmarkService.addBookmark(email, requestDto);
+        return SuccessResponse.of(SuccessCode.BOOKMARK_ADD_SUCCESS);
     }
 
     @DeleteMapping
     @Operation(summary = "즐겨찾기 삭제", description = "즐겨찾기를 삭제합니다.")
-    public ResponseEntity<SuccessResponse<String>> removeBookmark(
-            @RequestHeader("Authorization") String accessToken,
+    public ResponseEntity<SuccessResponse<Void>> removeBookmark(
+            @AuthenticationPrincipal String email,
             @RequestBody BookmarkRequestDto requestDto) {
-        SuccessResponse<String> response = bookmarkService.removeBookmark(accessToken, requestDto);
-        return ResponseEntity.ok(response);
+        bookmarkService.removeBookmark(email, requestDto);
+        return SuccessResponse.of(SuccessCode.BOOKMARK_REMOVE_SUCCESS);
     }
 
     @PatchMapping
     @Operation(summary = "즐겨찾기 수정", description = "즐겨찾기를 수정합니다.")
-    public ResponseEntity<SuccessResponse<String>> updateBookmark(
-            @RequestHeader("Authorization") String accessToken,
+    public ResponseEntity<SuccessResponse<Void>> updateBookmark(
+            @AuthenticationPrincipal String email,
             @RequestBody BookmarkUpdateRequestDto requestDto) {
-        SuccessResponse<String> response = bookmarkService.updateBookmark(accessToken, requestDto);
-        return ResponseEntity.ok(response);
+        bookmarkService.updateBookmark(email, requestDto);
+        return SuccessResponse.of(SuccessCode.BOOKMARK_UPDATE_SUCCESS);
     }
 }
