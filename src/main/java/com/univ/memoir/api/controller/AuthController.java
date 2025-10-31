@@ -1,6 +1,6 @@
 package com.univ.memoir.api.controller;
 
-import com.univ.memoir.api.dto.req.RefreshTokenRequest;
+import com.univ.memoir.api.dto.req.user.RefreshTokenRequest;
 import com.univ.memoir.api.dto.res.AuthResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,9 +24,6 @@ public class AuthController {
 
     private final AuthService authService;
 
-    /**
-     * 리프레시 토큰으로 새로운 액세스 토큰 발급
-     */
     @PostMapping("/refresh")
     @Operation(summary = "리프레시 토큰 갱신", description = "리프레시 토큰을 갱신합니다.")
     public ResponseEntity<AuthResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
@@ -34,9 +31,6 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 로그아웃
-     */
     @PostMapping("/logout")
     @Operation(summary = "로그아웃", description = "서비스에서 로그아웃 합니다.")
     public ResponseEntity<Void> logout(@AuthenticationPrincipal CustomUserDetails userDetails) {

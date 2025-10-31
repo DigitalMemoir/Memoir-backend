@@ -2,6 +2,8 @@ package com.univ.memoir.config.jwt;
 
 import java.io.IOException;
 
+import com.univ.memoir.api.exception.codes.ErrorCode;
+import com.univ.memoir.api.exception.customException.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -38,8 +40,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String accessToken = jwtProvider.createAccessToken(email);
         String refreshToken = jwtProvider.createRefreshToken(email);
 
-        user.updateAccessToken(accessToken);
-        userRepository.save(user);
+        User managedUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException(ErrorCode.USER_NOT_FOUND));
+
+        managedUser.updateAccessToken(accessToken);
 
         Boolean isNewUserAttr = customOAuth2User.getAttribute("isNewUser");
         boolean isNewUser = Boolean.TRUE.equals(isNewUserAttr);

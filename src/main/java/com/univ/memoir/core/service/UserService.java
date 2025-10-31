@@ -2,51 +2,47 @@ package com.univ.memoir.core.service;
 
 import java.util.Set;
 
+import com.univ.memoir.api.exception.GlobalException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.univ.memoir.api.exception.codes.ErrorCode;
 import com.univ.memoir.api.exception.customException.InvalidTokenException;
-import com.univ.memoir.config.jwt.JwtProvider;
 import com.univ.memoir.core.domain.InterestType;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.UserRepository;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserService {
 
     private final UserRepository userRepository;
-    private final JwtProvider jwtProvider;
+
+    public User findById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    public User findByEmail(String email) {
+        return userRepository.findByEmailWithDetails(email)
+                .orElseThrow(() -> new InvalidTokenException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    public User findByEmailForSummary(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new InvalidTokenException(ErrorCode.USER_NOT_FOUND));
+    }
 
     @Transactional
-    public User updateUserInterestsByToken(String accessToken, Set<InterestType> interests) {
-        String email = jwtProvider.getEmailFromToken(accessToken);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new InvalidTokenException(ErrorCode.INVALID_JWT_ACCESS_TOKEN));
+    public User updateUserInterests(String email, Set<InterestType> interests) {
+        User user = userRepository.findByEmailWithDetails(email)
+                .orElseThrow(() -> new InvalidTokenException(ErrorCode.USER_NOT_FOUND));
+
         user.updateInterests(interests);
+
         return user;
     }
-
-    public User findByAccessToken(String accessToken) {
-        // Bearer 접두사 제거
-        if (accessToken.startsWith("Bearer ")) {
-            accessToken = accessToken.substring(7).trim();
-        }
-
-        // 토큰 유효성 검사
-        if (!jwtProvider.validateToken(accessToken)) {
-            throw new InvalidTokenException(ErrorCode.INVALID_JWT_ACCESS_TOKEN);
-        }
-
-        // 이메일 추출
-        String email = jwtProvider.getEmailFromToken(accessToken);
-
-        // 사용자 조회
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new InvalidTokenException(ErrorCode.INVALID_JWT_ACCESS_TOKEN));
-    }
-
 }

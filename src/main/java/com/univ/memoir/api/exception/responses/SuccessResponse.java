@@ -16,9 +16,10 @@ public class SuccessResponse<T> {
     private final String msg;
     private T data;
 
-    public static ResponseEntity<SuccessResponse> of(SuccessCode success) {
-        return ResponseEntity.status(success.getStatus())
-                .body(new SuccessResponse(success.getStatusCode(), success.getMessage()));
+    public static ResponseEntity<SuccessResponse<Void>> of(SuccessCode success) {
+        return ResponseEntity
+                .status(success.getStatus())
+                .body(new SuccessResponse<>(success.getStatusCode(), success.getMessage()));
     }
 
     public static <T> ResponseEntity<SuccessResponse<T>> of(SuccessCode success, T data) {
