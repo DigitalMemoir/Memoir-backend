@@ -1,4 +1,4 @@
-package com.univ.memoir.api.dto.req;
+package com.univ.memoir.api.dto.req.user;
 
 import java.util.Set;
 
