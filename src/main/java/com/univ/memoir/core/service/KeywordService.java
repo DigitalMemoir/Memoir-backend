@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import lombok.Getter;
@@ -27,20 +26,22 @@ import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.univ.memoir.api.dto.req.VisitedPageDto;
-import com.univ.memoir.api.dto.req.VisitedPagesRequest;
+import com.univ.memoir.api.dto.req.page.VisitedPageDto;
+import com.univ.memoir.api.dto.req.page.VisitedPagesRequest;
 import com.univ.memoir.api.dto.res.KeywordFrequencyDto;
 import com.univ.memoir.api.dto.res.keyword.KeywordResponseDto;
 import com.univ.memoir.core.domain.KeywordData;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.KeywordDataRepository;
+import com.univ.memoir.core.repository.UserRepository;
+import com.univ.memoir.config.jwt.JwtProvider;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * 키워드 분석 서비스 - 성능 최적화 버전
- * 기존 API 구조는 유지하면서 성능만 개선
+ * N+1 문제 해결 + User 조회 최적화
  */
 @RequiredArgsConstructor
 @Service
@@ -49,12 +50,14 @@ import lombok.extern.slf4j.Slf4j;
 public class KeywordService {
 
     private static final ZoneId KST_ZONE = ZoneId.of("Asia/Seoul");
-    private static final long CACHE_DURATION_MS = 6 * 60 * 60 * 1000L; // 6시간 (더 짧게)
+    private static final long CACHE_DURATION_MS = 6 * 60 * 60 * 1000L; // 6시간
 
     private final ObjectMapper objectMapper;
     private final RestTemplate openAiRestTemplate;
     private final UserService userService;
     private final KeywordDataRepository keywordDataRepository;
+    private final UserRepository userRepository;
+    private final JwtProvider jwtProvider;
 
     @Value("${openai.api.key}")
     private String apiKey;
@@ -67,71 +70,66 @@ public class KeywordService {
 
     /**
      * 성능 최적화된 메모리 캐시
-     * 더 짧은 캐시 주기로 메모리 사용량 절약
      */
     private final Map<String, CachedKeywordData> memoryCache = new ConcurrentHashMap<>();
 
     /**
-     * 기존 API 구조 유지 - 키워드 분석
-     * 성능 최적화: 캐시 hit율 향상, 비동기 처리 추가
+     * 키워드 분석 - N+1 문제 해결
+     * User는 딱 1번만 조회, 이후는 userId만 사용
      */
     @Transactional
     public KeywordResponseDto analyzeKeywords(String accessToken, VisitedPagesRequest request) {
-        User user = userService.findByAccessToken(accessToken);
-        List<VisitedPageDto> visitedPages = request.getVisitedPages();
+        Long userId = extractUserIdFromToken(accessToken);
 
+        List<VisitedPageDto> visitedPages = request.getVisitedPages();
         validateVisitedPages(visitedPages);
 
         LocalDate today = LocalDate.now(KST_ZONE);
-        String cacheKey = generateCacheKey(user.getId(), today);
+        String cacheKey = generateCacheKey(userId, today);
 
-        // 성능 최적화 1: 더 효율적인 캐시 체크
-        KeywordResponseDto cachedResult = getCachedResult(user, today, cacheKey);
+        KeywordResponseDto cachedResult = getCachedResult(userId, today, cacheKey);
         if (cachedResult != null) {
-            // 비동기로 캐시 갱신 체크 (백그라운드에서 실행)
-            asyncCacheRefreshCheck(user, today, visitedPages.size());
+            asyncCacheRefreshCheck(userId, today, visitedPages.size());
             return cachedResult;
         }
 
-        // 캐시 미스 시 OpenAI API 호출
-        log.info("Cache miss - calling OpenAI API - userId: {}", user.getId());
+        log.info("Cache miss - calling OpenAI API - userId: {}", userId);
         KeywordResponseDto result = callOpenAiApi(visitedPages);
 
-        // 성능 최적화 2: 비동기 저장
-        asyncSaveToAllCaches(cacheKey, user, result);
+        asyncSaveToAllCaches(cacheKey, userId, result);
 
         return result;
     }
 
     /**
-     * 기존 API 구조 유지 - 상위 키워드 조회
-     * 성능 최적화: 더 효율적인 쿼리와 캐싱
+     * 상위 키워드 조회 - N+1 문제 해결
      */
     public List<KeywordFrequencyDto> getTopKeywordsForToday(String accessToken) {
-        User user = userService.findByAccessToken(accessToken);
+        // ✅ userId 직접 추출 (User 조회 안 함!)
+        Long userId = extractUserIdFromToken(accessToken);
+
         LocalDate today = LocalDate.now(KST_ZONE);
+        String cacheKey = "top_keywords_" + userId + "_" + today;
 
-        // 성능 최적화 3: 더 스마트한 캐시 키
-        String cacheKey = "top_keywords_" + user.getId() + "_" + today;
-
-        // 메모리 캐시에서 먼저 확인
+        // 메모리 캐시 확인
         CachedKeywordData cached = memoryCache.get(cacheKey);
         if (cached != null && cached.isValid()) {
             return cached.getTopKeywords();
         }
 
-        List<KeywordData> todayKeywords = getTodayKeywordsFromDatabase(user, today);
+        // ✅ userId 사용
+        List<KeywordData> todayKeywords = getTodayKeywordsFromDatabase(userId, today);
 
         if (todayKeywords.isEmpty()) {
             return List.of();
         }
 
-        // 성능 최적화 4: 스트림 연산 최적화
-        List<KeywordFrequencyDto> topKeywords = todayKeywords.parallelStream()
+        // 스트림 연산 (parallelStream은 데이터 적을 때 오히려 느릴 수 있음)
+        List<KeywordFrequencyDto> topKeywords = todayKeywords.stream()
                 .collect(Collectors.groupingBy(
                         KeywordData::getKeyword,
                         Collectors.summingInt(KeywordData::getFrequency)))
-                .entrySet().parallelStream()
+                .entrySet().stream()
                 .map(entry -> new KeywordFrequencyDto(entry.getKey(), entry.getValue()))
                 .sorted((a, b) -> Integer.compare(b.getFrequency(), a.getFrequency()))
                 .limit(9)
@@ -144,21 +142,20 @@ public class KeywordService {
     }
 
     /**
-     * 성능 최적화 1: 통합 캐시 체크
+     * 통합 캐시 체크 - userId 사용
      */
-    private KeywordResponseDto getCachedResult(User user, LocalDate today, String cacheKey) {
+    private KeywordResponseDto getCachedResult(Long userId, LocalDate today, String cacheKey) {
         // 메모리 캐시 우선 확인
         CachedKeywordData memoryCached = memoryCache.get(cacheKey);
         if (memoryCached != null && memoryCached.isValid()) {
-            log.debug("Memory cache hit - userId: {}", user.getId());
+            log.debug("Memory cache hit - userId: {}", userId);
             return memoryCached.getKeywordResponse();
         }
 
-        // DB 캐시 확인
-        Optional<KeywordResponseDto> dbCached = getKeywordsFromDatabase(user, today);
+        // ✅ DB 캐시 확인 (userId 사용)
+        Optional<KeywordResponseDto> dbCached = getKeywordsFromDatabase(userId, today);
         if (dbCached.isPresent()) {
-            log.debug("Database cache hit - userId: {}", user.getId());
-            // 메모리 캐시에도 저장
+            log.debug("Database cache hit - userId: {}", userId);
             memoryCache.put(cacheKey, new CachedKeywordData(dbCached.get(), null));
             return dbCached.get();
         }
@@ -167,20 +164,17 @@ public class KeywordService {
     }
 
     /**
-     * 성능 최적화 2: 비동기 캐시 갱신 체크
-     * 사용자가 새로운 페이지를 많이 방문했으면 백그라운드에서 재분석
+     * 비동기 캐시 갱신 체크 - userId 사용
      */
     @Async
-    public void asyncCacheRefreshCheck(User user, LocalDate date, int currentPageCount) {
+    public void asyncCacheRefreshCheck(Long userId, LocalDate date, int currentPageCount) {
         try {
-            List<KeywordData> existingKeywords = getTodayKeywordsFromDatabase(user, date);
+            List<KeywordData> existingKeywords = getTodayKeywordsFromDatabase(userId, date);
             int existingCount = existingKeywords.size();
 
-            // 새로운 페이지가 50% 이상 증가했으면 캐시 무효화 고려
             if (currentPageCount > existingCount * 1.5) {
                 log.info("Significant activity increase detected - userId: {}, existing: {}, current: {}",
-                        user.getId(), existingCount, currentPageCount);
-                // 필요시 캐시 무효화 로직 추가 가능
+                        userId, existingCount, currentPageCount);
             }
         } catch (Exception e) {
             log.warn("Background cache refresh check failed", e);
@@ -188,25 +182,26 @@ public class KeywordService {
     }
 
     /**
-     * 성능 최적화 3: 비동기 저장
+     * 비동기 저장 - userId 사용
      */
     @Async
-    public void asyncSaveToAllCaches(String cacheKey, User user, KeywordResponseDto result) {
+    public void asyncSaveToAllCaches(String cacheKey, Long userId, KeywordResponseDto result) {
         try {
             // 메모리 캐시 저장
             memoryCache.put(cacheKey, new CachedKeywordData(result, null));
 
-            // DB 저장
+            // ✅ DB 저장 (User 필요할 때만 조회)
+            User user = userService.findById(userId);
             saveToDatabase(user, result);
 
-            log.debug("Async save completed - userId: {}", user.getId());
+            log.debug("Async save completed - userId: {}", userId);
         } catch (Exception e) {
             log.error("Async save failed", e);
         }
     }
 
     /**
-     * 성능 최적화 4: 배치 삭제로 메모리 관리
+     * 배치 삭제로 메모리 관리
      */
     public void cleanupExpiredCache() {
         long now = System.currentTimeMillis();
@@ -219,11 +214,11 @@ public class KeywordService {
     }
 
     /**
-     * DB에서 키워드 조회 (Spring Cache 적용)
+     * DB에서 키워드 조회 - userId 사용
      */
-    @Cacheable(value = "dailyKeywords", key = "#user.id + '_' + #date")
-    public Optional<KeywordResponseDto> getKeywordsFromDatabase(User user, LocalDate date) {
-        List<KeywordData> todayKeywords = getTodayKeywordsFromDatabase(user, date);
+    @Cacheable(value = "dailyKeywords", key = "#userId + '_' + #date")
+    public Optional<KeywordResponseDto> getKeywordsFromDatabase(Long userId, LocalDate date) {
+        List<KeywordData> todayKeywords = getTodayKeywordsFromDatabase(userId, date);
 
         if (todayKeywords.isEmpty()) {
             return Optional.empty();
@@ -238,22 +233,22 @@ public class KeywordService {
     @CacheEvict(value = {"dailyKeywords", "topKeywords"}, key = "#user.id + '_' + #date")
     @Transactional
     public void invalidateCache(User user, LocalDate date) {
-        String cacheKey = generateCacheKey(user.getId(), date);
-        String topKeywordsCacheKey = "top_keywords_" + user.getId() + "_" + date;
+        Long userId = user.getId();
+        String cacheKey = generateCacheKey(userId, date);
+        String topKeywordsCacheKey = "top_keywords_" + userId + "_" + date;
 
         // 메모리 캐시 삭제
         memoryCache.remove(cacheKey);
         memoryCache.remove(topKeywordsCacheKey);
 
-        // DB 데이터 삭제
-        List<KeywordData> keywordsToDelete = getTodayKeywordsFromDatabase(user, date);
+        // ✅ DB 데이터 삭제 (userId 사용)
+        List<KeywordData> keywordsToDelete = getTodayKeywordsFromDatabase(userId, date);
         if (!keywordsToDelete.isEmpty()) {
             keywordDataRepository.deleteAll(keywordsToDelete);
-            log.info("Cache invalidated - userId: {}, date: {}", user.getId(), date);
+            log.info("Cache invalidated - userId: {}, date: {}", userId, date);
         }
     }
 
-    // 기존 메서드들 (성능 최적화 없이 유지)
     private void validateVisitedPages(List<VisitedPageDto> visitedPages) {
         if (visitedPages == null || visitedPages.isEmpty()) {
             throw new IllegalArgumentException("방문 페이지 데이터가 없습니다.");
@@ -316,14 +311,22 @@ public class KeywordService {
                 .map(kf -> new KeywordData(user, kf.getKeyword(), kf.getFrequency()))
                 .collect(Collectors.toList());
 
+        // Batch INSERT 활성화되어 있으면 자동으로 배치 처리됨
         keywordDataRepository.saveAll(keywordDataList);
         log.debug("Keywords saved - userId: {}, count: {}", user.getId(), keywordDataList.size());
     }
 
-    private List<KeywordData> getTodayKeywordsFromDatabase(User user, LocalDate date) {
+    /**
+     * ✅ N+1 문제 해결: userId만 사용
+     */
+    private List<KeywordData> getTodayKeywordsFromDatabase(Long userId, LocalDate date) {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
-        return keywordDataRepository.findByUserAndCreatedAtBetween(user, startOfDay, endOfDay);
+        return keywordDataRepository.findByUserIdAndCreatedAtBetween(
+                userId,  // ✅ User 객체 대신 ID만!
+                startOfDay,
+                endOfDay
+        );
     }
 
     private KeywordResponseDto convertToResponseDto(List<KeywordData> keywordDataList) {
@@ -338,6 +341,22 @@ public class KeywordService {
 
     private String generateCacheKey(Long userId, LocalDate date) {
         return userId + "_" + date.toString();
+    }
+
+    /**
+     * ✅ 토큰에서 userId 직접 추출 (User 조회 안 함!)
+     */
+    private Long extractUserIdFromToken(String accessToken) {
+        // Bearer 접두사 제거
+        if (accessToken.startsWith("Bearer ")) {
+            accessToken = accessToken.substring(7).trim();
+        }
+
+        String email = jwtProvider.getEmailFromToken(accessToken);
+
+        // ✅ ID만 조회! (interests/bookmarks 안 가져옴)
+        return userRepository.findIdByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     private String createPrompt(List<VisitedPageDto> visitedPages) throws JsonProcessingException {
