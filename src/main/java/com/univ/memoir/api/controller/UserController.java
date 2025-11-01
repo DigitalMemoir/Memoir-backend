@@ -28,7 +28,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/profile")
-    @Operation(summary = "프로필 조회", description = "액세스 토큰을 기반으로 사용자 프로필을 조회합니다.")
+    @Operation(summary = "프로필 조회", description = "인증 컨텍스트의 이메일을 기반으로 사용자 프로필을 조회합니다.")
     public ResponseEntity<?> getUserProfileByToken(
             @AuthenticationPrincipal String email
     ) {
