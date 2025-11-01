@@ -34,7 +34,7 @@ public class User {
     private Long id;
 
     @Column(name = "google_id", nullable = false, unique = true)
-    private String googleId; // 구글 OAuth 고유 식별자 (sub)
+    private String googleId;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -51,13 +51,13 @@ public class User {
     @Column(length = 1, nullable = false)
     private String status = "N"; // 'N' = 정상 / 'Y' = 탈퇴
 
-    @ElementCollection(targetClass = InterestType.class, fetch = FetchType.EAGER)
+    @ElementCollection(targetClass = InterestType.class, fetch = FetchType.LAZY)
     @CollectionTable(name = "user_interests", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "interest")
     private Set<InterestType> interests = new HashSet<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
             name = "user_bookmarks",
             joinColumns = @JoinColumn(name = "user_id"),

@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.univ.memoir.api.dto.req.VisitedPagesRequest;
+import com.univ.memoir.api.dto.req.page.VisitedPagesRequest;
 import com.univ.memoir.api.dto.res.KeywordFrequencyDto;
 import com.univ.memoir.api.dto.res.keyword.KeywordResponseDto;
 import com.univ.memoir.api.exception.codes.SuccessCode;
@@ -36,7 +36,7 @@ public class KeywordController {
             @RequestBody VisitedPagesRequest request
     ) {
         KeywordResponseDto result = keywordService.analyzeKeywords(accessToken, request);
-        return ResponseEntity.ok(SuccessResponse.of(SuccessCode.KEYWORD_EXTRACTION_SUCCESS, result).getBody());
+        return SuccessResponse.of(SuccessCode.KEYWORD_EXTRACTION_SUCCESS, result);
     }
 
     @GetMapping("/today/top9")
@@ -47,6 +47,6 @@ public class KeywordController {
         // KeywordService의 getTopKeywordsForToday 메서드를 호출하여 상위 9개 키워드 목록을 가져옵니다.
         List<KeywordFrequencyDto> topKeywords = keywordService.getTopKeywordsForToday(accessToken);
 
-        return ResponseEntity.ok(SuccessResponse.of(SuccessCode.TOP_KEYWORDS_RETRIEVED_SUCCESS, topKeywords).getBody());
+        return SuccessResponse.of(SuccessCode.TOP_KEYWORDS_RETRIEVED_SUCCESS, topKeywords);
     }
 }
