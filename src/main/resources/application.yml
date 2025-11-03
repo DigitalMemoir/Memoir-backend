@@ -54,11 +54,23 @@ openai:
 logging:
   file:
     name: ${LOG_FILE_PATH}
+
   level:
     root: ${LOG_LEVEL_ROOT:INFO}
     com.univ.memoir: ${LOG_LEVEL_APP:INFO}
+
+    # --- Hibernate 관련 ---
     org.hibernate.SQL: ${LOG_LEVEL_SQL:WARN}
     org.hibernate.type.descriptor.sql.BasicBinder: ${LOG_LEVEL_BINDER:OFF}
+
+    # --- CloudWatch / AWS 관련 로그 억제 ---
+    org.apache.http.wire: OFF
+    org.apache.http.headers: OFF
+    com.amazonaws.request: WARN
+    software.amazon.awssdk.request: WARN
+    com.amazonaws: INFO
+    CLOUDWATCH: INFO
+
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
