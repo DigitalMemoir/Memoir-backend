@@ -26,9 +26,13 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
+    show-sql: false
     hibernate:
       ddl-auto: ${DDL_AUTO}
-    show-sql: ${SHOW_SQL}
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
 
   mvc:
     async:
@@ -48,8 +52,13 @@ openai:
     id: ${OPENAI_ASSISTANT_ID}
 
 logging:
+  file:
+    name: ${LOG_FILE_PATH}
   level:
     root: ${LOG_LEVEL_ROOT:INFO}
-    com.univ.memoir: ${LOG_LEVEL_APP:DEBUG}
+    com.univ.memoir: ${LOG_LEVEL_APP:INFO}
+    org.hibernate.SQL: ${LOG_LEVEL_SQL:WARN}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${LOG_LEVEL_BINDER:OFF}
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%5level) %cyan(%logger{30}) - %magenta(%msg) [traceId=%X{traceId}]%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
