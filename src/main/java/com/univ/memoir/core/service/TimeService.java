@@ -29,7 +29,7 @@ import com.univ.memoir.api.dto.res.time.ActivityStats;
 import com.univ.memoir.api.dto.res.time.CategorySummary;
 import com.univ.memoir.api.dto.res.time.HourlyBreakdown;
 import com.univ.memoir.api.exception.codes.ErrorCode;
-import com.univ.memoir.api.exception.customException.UserNotFoundException;
+import com.univ.memoir.api.exception.custom.UserNotFoundException;
 import com.univ.memoir.core.domain.TimeAnalysisData;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.TimeAnalysisDataRepository;

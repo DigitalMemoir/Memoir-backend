@@ -5,7 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.univ.memoir.api.dto.res.AuthResponse;
 import com.univ.memoir.api.exception.codes.ErrorCode;
-import com.univ.memoir.api.exception.customException.InvalidTokenException;
+import com.univ.memoir.api.exception.custom.InvalidTokenException;
 import com.univ.memoir.config.jwt.JwtProvider;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.UserRepository;

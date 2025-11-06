@@ -3,7 +3,7 @@ package com.univ.memoir.config.jwt;
 import java.io.IOException;
 
 import com.univ.memoir.api.exception.codes.ErrorCode;
-import com.univ.memoir.api.exception.customException.UserNotFoundException;
+import com.univ.memoir.api.exception.custom.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;

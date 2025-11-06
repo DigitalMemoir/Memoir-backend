@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.univ.memoir.api.exception.codes.ErrorCode;
-import com.univ.memoir.api.exception.customException.InvalidTokenException;
+import com.univ.memoir.api.exception.custom.InvalidTokenException;
 import com.univ.memoir.core.domain.InterestType;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.UserRepository;

@@ -2,7 +2,7 @@ package com.univ.memoir.core.service;
 
 import java.util.Set;
 
-import com.univ.memoir.api.exception.customException.UserNotFoundException;
+import com.univ.memoir.api.exception.custom.UserNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

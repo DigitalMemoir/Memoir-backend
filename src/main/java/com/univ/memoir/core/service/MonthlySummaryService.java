@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.univ.memoir.api.dto.res.DailyPopupResponse;
 import com.univ.memoir.api.dto.res.MonthlySummaryResponse;
 import com.univ.memoir.api.exception.codes.ErrorCode;
-import com.univ.memoir.api.exception.customException.UserNotFoundException;
+import com.univ.memoir.api.exception.custom.UserNotFoundException;
 import com.univ.memoir.core.domain.DailySummary;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.DailySummaryRepository;
