@@ -23,6 +23,7 @@
         </rollingPolicy>
     </appender>
 
+    <!-- CloudWatch Logs -->
     <appender name="CLOUDWATCH" class="ca.pjer.logback.AwsLogsAppender">
         <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
             <evaluator>
@@ -30,28 +31,50 @@
                     logger.contains("org.apache.http") ||
                     logger.contains("software.amazon.awssdk") ||
                     logger.contains("com.amazonaws") ||
-                    logger.contains("CLOUDWATCH")
+                    logger.contains("CLOUDWATCH") ||
+                    logger.contains("ca.pjer.logback")
                 </expression>
             </evaluator>
             <onMatch>DENY</onMatch>
             <onMismatch>NEUTRAL</onMismatch>
         </filter>
-
         <layout>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </layout>
-
         <logGroupName>/aws/ec2/memoir-app</logGroupName>
         <logStreamName>${HOSTNAME:-unknown}-%d{yyyyMMdd}</logStreamName>
         <logRegion>ap-northeast-2</logRegion>
-
         <maxBatchLogEvents>50</maxBatchLogEvents>
         <maxFlushTimeMillis>30000</maxFlushTimeMillis>
         <maxBlockTimeMillis>5000</maxBlockTimeMillis>
     </appender>
 
-    <logger name="com.univ.memoir" level="${LOG_LEVEL_APP:INFO}">
+    <logger name="com.univ.memoir" level="${LOG_LEVEL_APP:-INFO}" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
         <appender-ref ref="CLOUDWATCH"/>
+    </logger>
+
+    <logger name="org.springframework" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="CLOUDWATCH"/>
+    </logger>
+
+    <logger name="org.hibernate" level="WARN" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="CLOUDWATCH"/>
+    </logger>
+
+    <logger name="org.apache.http" level="WARN" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <logger name="software.amazon.awssdk" level="WARN" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
     </logger>
 
     <root level="${LOG_LEVEL_ROOT:-INFO}">
