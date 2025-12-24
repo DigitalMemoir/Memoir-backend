@@ -50,7 +50,7 @@ import lombok.extern.slf4j.Slf4j;
 public class KeywordService {
 
     private static final ZoneId KST_ZONE = ZoneId.of("Asia/Seoul");
-    private static final long CACHE_DURATION_MS = 6 * 60 * 60 * 1000L; // 6시간
+    private static final long CACHE_DURATION_MS = 2 * 60 * 60 * 1000L;
 
     private final ObjectMapper objectMapper;
     private final RestTemplate openAiRestTemplate;
