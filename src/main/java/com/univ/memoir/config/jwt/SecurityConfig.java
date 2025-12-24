@@ -17,6 +17,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.univ.memoir.core.filter.CachingRequestFilter;
 import com.univ.memoir.core.service.CustomOAuth2UserService;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -27,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final CachingRequestFilter cachingRequestFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
@@ -67,6 +69,7 @@ public class SecurityConfig {
                             .failureHandler((request, response, exception) -> response.sendRedirect("/login?error"));
                 })
 
+                .addFilterBefore(cachingRequestFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
