@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.univ.memoir.api.dto.res.DailyPopupResponse;
 import com.univ.memoir.api.dto.res.MonthlySummaryResponse;
 import com.univ.memoir.api.exception.codes.ErrorCode;
-import com.univ.memoir.api.exception.customException.UserNotFoundException;
+import com.univ.memoir.api.exception.custom.UserNotFoundException;
 import com.univ.memoir.core.domain.DailySummary;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.DailySummaryRepository;
@@ -30,8 +30,16 @@ public class MonthlySummaryService {
 	private final ObjectMapper objectMapper;
 	private final UserService userService;
 
-	public MonthlySummaryResponse.Data getMonthlySummary(String accessToken, YearMonth yearMonth) {
-		User user = userService.findByAccessToken(accessToken);
+	/**
+	 * 월별 요약 조회
+	 *
+	 * @param email 사용자 이메일 (SecurityContext에서 추출)
+	 * @param yearMonth 조회할 년월
+	 * @return 월별 요약 데이터
+	 */
+	public MonthlySummaryResponse.Data getMonthlySummary(String email, YearMonth yearMonth) {
+		// ✅ 이메일로 User 조회 (interests/bookmarks 불필요)
+		User user = userService.findByEmailForSummary(email);
 
 		if (user == null) {
 			throw new UserNotFoundException(ErrorCode.USER_NOT_FOUND);
@@ -43,10 +51,18 @@ public class MonthlySummaryService {
 		List<DailySummary> summaries = dailySummaryRepository.findAllByUserAndDateBetween(user, start, end);
 
 		List<MonthlySummaryResponse.CalendarEntry> entries = summaries.stream()
-				.map(summary -> {
-					String title = extractTopKeyword(summary.getTopKeywordsJson());
-					return new MonthlySummaryResponse.CalendarEntry(summary.getDate().toString(), title);
-				})
+				.collect(
+						java.util.stream.Collectors.toMap(
+								summary -> summary.getDate().toString(), // key: 날짜 문자열
+								summary -> {
+									String title = extractTopKeyword(summary.getTopKeywordsJson());
+									return new MonthlySummaryResponse.CalendarEntry(summary.getDate().toString(), title);
+								},
+								(existing, replacement) -> existing // 중복일 경우 existing 값을 제공
+						)
+				)
+				.values()
+				.stream()
 				.toList();
 
 		return new MonthlySummaryResponse.Data(
@@ -54,6 +70,29 @@ public class MonthlySummaryService {
 				yearMonth.getMonthValue(),
 				entries
 		);
+	}
+
+	/**
+	 * 일별 팝업 조회
+	 *
+	 * @param email 사용자 이메일 (SecurityContext에서 추출)
+	 * @param date 조회할 날짜
+	 * @return 일별 팝업 데이터
+	 */
+	public DailyPopupResponse.Data getDailyPopup(String email, LocalDate date) {
+		// ✅ 이메일로 User 조회 (interests/bookmarks 불필요)
+		User user = userService.findByEmailForSummary(email);
+
+		if (user == null) {
+			throw new UserNotFoundException(ErrorCode.USER_NOT_FOUND);
+		}
+
+		DailySummary summary = dailySummaryRepository.findByUserAndDate(user, date)
+				.orElseThrow(() -> new EntityNotFoundException("해당 날짜의 요약이 존재하지 않습니다."));
+
+		List<String> summaryTexts = parseSummaryTextJson(summary.getSummaryTextJson());
+
+		return new DailyPopupResponse.Data(date.toString(), summaryTexts);
 	}
 
 	private String extractTopKeyword(String topKeywordsJson) {
@@ -66,21 +105,6 @@ public class MonthlySummaryService {
 			return "기록 없음";
 		}
 		return "기록 없음";
-	}
-
-	public DailyPopupResponse.Data getDailyPopup(String accessToken, LocalDate date) {
-		User user = userService.findByAccessToken(accessToken);
-
-		if (user == null) {
-			throw new UserNotFoundException(ErrorCode.USER_NOT_FOUND);
-		}
-
-		DailySummary summary = dailySummaryRepository.findByUserAndDate(user, date)
-				.orElseThrow(() -> new EntityNotFoundException("해당 날짜의 요약이 존재하지 않습니다."));
-
-		List<String> summaryTexts = parseSummaryTextJson(summary.getSummaryTextJson());
-
-		return new DailyPopupResponse.Data(date.toString(), summaryTexts);
 	}
 
 	private List<String> parseSummaryTextJson(String json) {

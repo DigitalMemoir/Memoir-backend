@@ -29,7 +29,7 @@ import com.univ.memoir.api.dto.res.time.ActivityStats;
 import com.univ.memoir.api.dto.res.time.CategorySummary;
 import com.univ.memoir.api.dto.res.time.HourlyBreakdown;
 import com.univ.memoir.api.exception.codes.ErrorCode;
-import com.univ.memoir.api.exception.customException.UserNotFoundException;
+import com.univ.memoir.api.exception.custom.UserNotFoundException;
 import com.univ.memoir.core.domain.TimeAnalysisData;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.TimeAnalysisDataRepository;
@@ -62,23 +62,24 @@ public class TimeService {
         this.timeAnalysisRepository = timeAnalysisRepository;
     }
 
-    public ActivityStats analyzeTimeStats(String accessToken, TimeAnalysisRequest request) {
-        User currentUser = userService.findByAccessToken(accessToken);
+    /**
+     * 시간 통계 분석
+     *
+     * @param email 사용자 이메일 (SecurityContext에서 추출)
+     * @param request 시간 분석 요청 데이터
+     * @return 활동 통계
+     */
+    public ActivityStats analyzeTimeStats(String email, TimeAnalysisRequest request) {
+        User currentUser = userService.findByEmailForSummary(email);
+
         if (currentUser == null) {
             throw new UserNotFoundException(ErrorCode.USER_NOT_FOUND);
         }
 
         LocalDate requestDate = LocalDate.parse(request.getDate());
 
-        // 1. 캐시된 데이터 확인
-        Optional<TimeAnalysisData> cached = timeAnalysisRepository.findByUserAndDate(currentUser, requestDate);
-        if (cached.isPresent()) {
-            log.info("Cache hit - returning saved data for user: {}, date: {}", currentUser.getId(), requestDate);
-            return convertToActivityStats(cached.get());
-        }
-
-        // 2. 캐시 미스 - GPT API 호출 후 저장
-        log.info("Cache miss - calling GPT API for user: {}, date: {}", currentUser.getId(), requestDate);
+        // GPT API 호출 후 저장
+        log.info("Calling GPT API for user: {}, date: {}", currentUser.getId(), requestDate);
         List<VisitedPageForTimeDto> pages = request.getVisitedPages();
         if (pages == null || pages.isEmpty()) {
             throw new IllegalArgumentException("방문 기록이 없습니다.");
@@ -88,7 +89,7 @@ public class TimeService {
             List<CategorizedPage> categorizedPages = fetchCategorizedPages(pages);
             ActivityStats result = summarizeActivity(categorizedPages);
 
-            // 3. DB에 저장
+            // DB에 저장
             saveToDatabase(currentUser, requestDate, result);
 
             return result;

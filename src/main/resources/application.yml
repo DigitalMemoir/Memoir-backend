@@ -1,0 +1,76 @@
+server:
+  port: ${SERVER_PORT}
+
+spring:
+  profiles:
+    active: ${SPRING_PROFILE}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: ${BASE_URL}/login/oauth2/code/{registrationId}
+            scope:
+              - email
+              - profile
+    jwt:
+      secret: ${JWT_SECRET}
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: ${DDL_AUTO}
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+
+  mvc:
+    async:
+      request-timeout: 60000
+
+oauth2:
+  redirect-uri:
+    githubpages: ${OAUTH2_GITHUBPAGES_REDIRECT_URI}
+
+openai:
+  api:
+    key: ${OPENAI_API_KEY}
+    base-url: ${OPENAI_BASE_URL}
+  model: ${OPENAI_MODEL}
+  uri: ${OPENAI_URI}
+  assistant:
+    id: ${OPENAI_ASSISTANT_ID}
+
+logging:
+  file:
+    name: ${LOG_FILE_PATH}
+
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.univ.memoir: ${LOG_LEVEL_APP:INFO}
+
+    # --- Hibernate 관련 ---
+    org.hibernate.SQL: ${LOG_LEVEL_SQL:WARN}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${LOG_LEVEL_BINDER:OFF}
+
+    # --- CloudWatch / AWS 관련 로그 억제 ---
+    org.apache.http.wire: OFF
+    org.apache.http.headers: OFF
+    com.amazonaws.request: WARN
+    software.amazon.awssdk.request: WARN
+    com.amazonaws: INFO
+    CLOUDWATCH: INFO
+
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -4,6 +4,7 @@ import java.time.YearMonth;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import com.univ.memoir.api.dto.res.MonthlySummaryResponse;
@@ -26,12 +27,10 @@ public class SummaryController {
 	@GetMapping("/monthly/{date}")
 	@Operation(summary = "월별 요약 페이지", description = "월별 요약 페이지를 조회합니다.")
 	public ResponseEntity<SuccessResponse<MonthlySummaryResponse.Data>> getMonthlySummary(
-			@RequestHeader("Authorization") String accessToken,
+			@AuthenticationPrincipal String email,
 			@PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth
 	) {
-		MonthlySummaryResponse.Data data = monthlySummaryService.getMonthlySummary(accessToken ,yearMonth);
+		MonthlySummaryResponse.Data data = monthlySummaryService.getMonthlySummary(email, yearMonth);
 		return SuccessResponse.of(SuccessCode.MONTHLY_SUMMARY_OK, data);
 	}
-
-
 }

@@ -5,7 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.univ.memoir.api.dto.res.AuthResponse;
 import com.univ.memoir.api.exception.codes.ErrorCode;
-import com.univ.memoir.api.exception.customException.InvalidTokenException;
+import com.univ.memoir.api.exception.custom.InvalidTokenException;
 import com.univ.memoir.config.jwt.JwtProvider;
 import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.UserRepository;
@@ -20,9 +20,6 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
 
-    /**
-     * 리프레시 토큰으로 새로운 토큰 쌍 발급 (간단 버전)
-     */
     @Transactional
     public AuthResponse refreshAccessToken(String refreshToken) {
         if (!jwtProvider.validateToken(refreshToken)) {
@@ -39,7 +36,6 @@ public class AuthService {
         String newRefreshToken = jwtProvider.createRefreshToken(email);
 
         user.updateAccessToken(newAccessToken);
-        userRepository.save(user);
 
         return AuthResponse.builder()
                 .accessToken(newAccessToken)
@@ -50,21 +46,14 @@ public class AuthService {
                 .build();
     }
 
-    /**
-     * 로그아웃 (간단 버전)
-     */
     @Transactional
     public void logout(String email) {
         userRepository.findByEmail(email)
                 .ifPresent(user -> {
                     user.updateAccessToken(null);
-                    userRepository.save(user);
                 });
     }
 
-    /**
-     * 토큰에서 이메일 추출 (UserService용)
-     */
     public String extractEmailFromToken(String accessToken) {
         String cleanToken = accessToken.startsWith("Bearer ") ?
                 accessToken.substring(7).trim() : accessToken.trim();

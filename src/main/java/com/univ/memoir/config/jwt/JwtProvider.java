@@ -98,12 +98,4 @@ public class JwtProvider {
                 .getBody()
                 .getSubject();
     }
-
-    public Authentication getAuthentication(String token) {
-        String email = getEmailFromToken(token);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
-        UserDetails userDetails = new CustomUserDetails(user);
-        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-    }
 }
