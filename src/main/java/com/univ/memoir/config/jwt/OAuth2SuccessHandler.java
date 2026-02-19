@@ -34,13 +34,15 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                                         Authentication authentication) throws IOException {
 
         CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
-        User user = customOAuth2User.getUser();
-        String email = user.getEmail();
+        User detachedUser = customOAuth2User.getUser();
+        String email = detachedUser.getEmail();
 
         String accessToken = jwtProvider.createAccessToken(email);
         String refreshToken = jwtProvider.createRefreshToken(email);
 
-        User managedUser = userRepository.findByEmail(email)
+        // detachedUser는 이미 이메일/ID를 보유하고 있으나 영속 컨텍스트가 없으므로
+        // Dirty Checking을 위해 PK 기반으로 재조회 (email보다 PK가 인덱스 효율 우수)
+        User managedUser = userRepository.findById(detachedUser.getId())
                 .orElseThrow(() -> new UserNotFoundException(ErrorCode.USER_NOT_FOUND));
 
         managedUser.updateAccessToken(accessToken);
