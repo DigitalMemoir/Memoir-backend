@@ -37,8 +37,16 @@ public class UserService {
     }
 
     @Transactional
+    public void updateAccessToken(String email, String newAccessToken) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new InvalidTokenException(ErrorCode.USER_NOT_FOUND));
+        user.updateAccessToken(newAccessToken);
+    }
+
+    // findByEmailWithInterests 사용: bookmarkUrls 불필요하므로 제외해 카르테시안 곱 방지
+    @Transactional
     public User updateUserInterests(String email, Set<InterestType> interests) {
-        User user = userRepository.findByEmailWithDetails(email)
+        User user = userRepository.findByEmailWithInterests(email)
                 .orElseThrow(() -> new InvalidTokenException(ErrorCode.USER_NOT_FOUND));
 
         user.updateInterests(interests);

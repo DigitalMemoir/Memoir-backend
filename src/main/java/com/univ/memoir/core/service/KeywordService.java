@@ -11,6 +11,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
+
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
@@ -102,42 +104,29 @@ public class KeywordService {
     }
 
     /**
-     * 상위 키워드 조회 - N+1 문제 해결
+     * 상위 키워드 조회.
+     * 기존: 전체 행을 Java로 올려 groupingBy + sorted + limit 수행 (인메모리 연산)
+     * 변경: DB에서 GROUP BY + SUM + ORDER BY + LIMIT 9 처리 후 결과만 반환
      */
     public List<KeywordFrequencyDto> getTopKeywordsForToday(String accessToken) {
-        // ✅ userId 직접 추출 (User 조회 안 함!)
         Long userId = extractUserIdFromToken(accessToken);
 
         LocalDate today = LocalDate.now(KST_ZONE);
         String cacheKey = "top_keywords_" + userId + "_" + today;
 
-        // 메모리 캐시 확인
         CachedKeywordData cached = memoryCache.get(cacheKey);
         if (cached != null && cached.isValid()) {
             return cached.getTopKeywords();
         }
 
-        // ✅ userId 사용
-        List<KeywordData> todayKeywords = getTodayKeywordsFromDatabase(userId, today);
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
 
-        if (todayKeywords.isEmpty()) {
-            return List.of();
-        }
+        // DB에서 GROUP BY + SUM + ORDER BY DESC + LIMIT 9 처리
+        List<KeywordFrequencyDto> topKeywords = keywordDataRepository.findTopKeywordsByUserIdAndDate(
+                userId, startOfDay, endOfDay, PageRequest.of(0, 9));
 
-        // 스트림 연산 (parallelStream은 데이터 적을 때 오히려 느릴 수 있음)
-        List<KeywordFrequencyDto> topKeywords = todayKeywords.stream()
-                .collect(Collectors.groupingBy(
-                        KeywordData::getKeyword,
-                        Collectors.summingInt(KeywordData::getFrequency)))
-                .entrySet().stream()
-                .map(entry -> new KeywordFrequencyDto(entry.getKey(), entry.getValue()))
-                .sorted((a, b) -> Integer.compare(b.getFrequency(), a.getFrequency()))
-                .limit(9)
-                .collect(Collectors.toList());
-
-        // 결과를 메모리 캐시에 저장
         memoryCache.put(cacheKey, new CachedKeywordData(null, topKeywords));
-
         return topKeywords;
     }
 
@@ -164,13 +153,17 @@ public class KeywordService {
     }
 
     /**
-     * 비동기 캐시 갱신 체크 - userId 사용
+     * 비동기 캐시 갱신 체크.
+     * 기존: 전체 행을 SELECT 후 List.size()로 카운트
+     * 변경: COUNT 쿼리 한 번으로 처리 (행을 Java로 올리지 않음)
      */
     @Async
     public void asyncCacheRefreshCheck(Long userId, LocalDate date, int currentPageCount) {
         try {
-            List<KeywordData> existingKeywords = getTodayKeywordsFromDatabase(userId, date);
-            int existingCount = existingKeywords.size();
+            LocalDateTime startOfDay = date.atStartOfDay();
+            LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
+
+            long existingCount = keywordDataRepository.countByUserIdAndCreatedAtBetween(userId, startOfDay, endOfDay);
 
             if (currentPageCount > existingCount * 1.5) {
                 log.info("Significant activity increase detected - userId: {}, existing: {}, current: {}",
@@ -182,15 +175,16 @@ public class KeywordService {
     }
 
     /**
-     * 비동기 저장 - userId 사용
+     * 비동기 저장.
+     * @Transactional 추가: @Async는 새 스레드에서 실행되므로 호출자 트랜잭션이 전파되지 않음.
+     * saveAll이 트랜잭션 보호 없이 실행되던 문제 해결.
      */
     @Async
+    @Transactional
     public void asyncSaveToAllCaches(String cacheKey, Long userId, KeywordResponseDto result) {
         try {
-            // 메모리 캐시 저장
             memoryCache.put(cacheKey, new CachedKeywordData(result, null));
 
-            // ✅ DB 저장 (User 필요할 때만 조회)
             User user = userService.findById(userId);
             saveToDatabase(user, result);
 
@@ -228,25 +222,22 @@ public class KeywordService {
     }
 
     /**
-     * 캐시 무효화
+     * 캐시 무효화.
+     * 기존: getTodayKeywordsFromDatabase로 전체 행 SELECT 후 deleteAll (N번 DELETE)
+     * 변경: 벌크 DELETE 쿼리 한 번으로 처리
      */
     @CacheEvict(value = {"dailyKeywords", "topKeywords"}, key = "#user.id + '_' + #date")
     @Transactional
     public void invalidateCache(User user, LocalDate date) {
         Long userId = user.getId();
-        String cacheKey = generateCacheKey(userId, date);
-        String topKeywordsCacheKey = "top_keywords_" + userId + "_" + date;
+        memoryCache.remove(generateCacheKey(userId, date));
+        memoryCache.remove("top_keywords_" + userId + "_" + date);
 
-        // 메모리 캐시 삭제
-        memoryCache.remove(cacheKey);
-        memoryCache.remove(topKeywordsCacheKey);
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
 
-        // ✅ DB 데이터 삭제 (userId 사용)
-        List<KeywordData> keywordsToDelete = getTodayKeywordsFromDatabase(userId, date);
-        if (!keywordsToDelete.isEmpty()) {
-            keywordDataRepository.deleteAll(keywordsToDelete);
-            log.info("Cache invalidated - userId: {}, date: {}", userId, date);
-        }
+        keywordDataRepository.deleteByUserIdAndCreatedAtBetween(userId, startOfDay, endOfDay);
+        log.info("Cache invalidated - userId: {}, date: {}", userId, date);
     }
 
     private void validateVisitedPages(List<VisitedPageDto> visitedPages) {
