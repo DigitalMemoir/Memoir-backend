@@ -7,7 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "time_analysis_data")
+@Table(name = "time_analysis_data", indexes = {
+    @Index(name = "idx_time_analysis_user_date", columnList = "user_id, date")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TimeAnalysisData {
@@ -29,10 +31,16 @@ public class TimeAnalysisData {
     @Column(columnDefinition = "TEXT")
     private String hourlyBreakdownsJson;
 
-    public TimeAnalysisData(User user, LocalDate date, int totalUsageMinutes, 
+    public TimeAnalysisData(User user, LocalDate date, int totalUsageMinutes,
                            String categorySummariesJson, String hourlyBreakdownsJson) {
         this.user = user;
         this.date = date;
+        this.totalUsageMinutes = totalUsageMinutes;
+        this.categorySummariesJson = categorySummariesJson;
+        this.hourlyBreakdownsJson = hourlyBreakdownsJson;
+    }
+
+    public void update(int totalUsageMinutes, String categorySummariesJson, String hourlyBreakdownsJson) {
         this.totalUsageMinutes = totalUsageMinutes;
         this.categorySummariesJson = categorySummariesJson;
         this.hourlyBreakdownsJson = hourlyBreakdownsJson;
