@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -35,6 +36,7 @@ import com.univ.memoir.core.domain.User;
 import com.univ.memoir.core.repository.TimeAnalysisDataRepository;
 
 @Service
+@Transactional(readOnly = true)
 public class TimeService {
     private static final Logger log = LoggerFactory.getLogger(TimeService.class);
 
@@ -63,12 +65,10 @@ public class TimeService {
     }
 
     /**
-     * 시간 통계 분석
-     *
-     * @param email 사용자 이메일 (SecurityContext에서 추출)
-     * @param request 시간 분석 요청 데이터
-     * @return 활동 통계
+     * 시간 통계 분석.
+     * @Transactional 추가: findByUserAndDate + save를 하나의 트랜잭션으로 묶어 중복 INSERT 방지.
      */
+    @Transactional
     public ActivityStats analyzeTimeStats(String email, TimeAnalysisRequest request) {
         User currentUser = userService.findByEmailForSummary(email);
 
@@ -99,20 +99,31 @@ public class TimeService {
         }
     }
 
+    /**
+     * upsert 구현: 같은 (user, date)가 이미 존재하면 UPDATE, 없으면 INSERT.
+     * 기존: 항상 새 엔티티를 INSERT하여 동일 날짜 데이터 중복 생성 가능.
+     */
     private void saveToDatabase(User user, LocalDate date, ActivityStats stats) {
         try {
-            TimeAnalysisData data = new TimeAnalysisData(
-                    user,
-                    date,
-                    stats.getTotalUsageTimeMinutes(),
-                    objectMapper.writeValueAsString(stats.getCategorySummaries()),
-                    objectMapper.writeValueAsString(stats.getHourlyActivityBreakdown())
-            );
-            timeAnalysisRepository.save(data);
-            log.debug("Time analysis data saved - userId: {}, date: {}", user.getId(), date);
+            String categorySummariesJson = objectMapper.writeValueAsString(stats.getCategorySummaries());
+            String hourlyBreakdownsJson = objectMapper.writeValueAsString(stats.getHourlyActivityBreakdown());
+
+            Optional<TimeAnalysisData> existing = timeAnalysisRepository.findByUserAndDate(user, date);
+            if (existing.isPresent()) {
+                existing.get().update(stats.getTotalUsageTimeMinutes(), categorySummariesJson, hourlyBreakdownsJson);
+                log.debug("Time analysis data updated - userId: {}, date: {}", user.getId(), date);
+            } else {
+                TimeAnalysisData data = new TimeAnalysisData(
+                        user, date,
+                        stats.getTotalUsageTimeMinutes(),
+                        categorySummariesJson,
+                        hourlyBreakdownsJson
+                );
+                timeAnalysisRepository.save(data);
+                log.debug("Time analysis data inserted - userId: {}, date: {}", user.getId(), date);
+            }
         } catch (Exception e) {
             log.error("Failed to save time analysis data", e);
-            // 저장 실패해도 결과는 반환
         }
     }
 

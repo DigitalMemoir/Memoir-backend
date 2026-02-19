@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -33,6 +34,7 @@ import com.univ.memoir.core.repository.DailySummaryRepository;
 
 
 @Service
+@Transactional(readOnly = true)
 public class DailySummaryService {
 
 	private static final Logger log = LoggerFactory.getLogger(DailySummaryService.class);
@@ -70,11 +72,11 @@ public class DailySummaryService {
 
 	/**
 	 * 사용자의 일일 활동을 요약합니다.
-	 *
-	 * @param email 사용자 이메일 (SecurityContext에서 추출)
-	 * @param request 시간 분석 요청 DTO
-	 * @return 요약된 일일 활동 결과
+	 * GPT API 호출(외부 HTTP)은 트랜잭션 범위 밖에서 선행된 후, DB 저장 시점에만 트랜잭션을 사용합니다.
+	 * @Transactional을 메서드 단위로 선언하여 findByUserAndDate + save가 하나의 트랜잭션으로 묶임.
+	 * 이를 통해 동시 요청으로 인한 중복 INSERT(check-then-act 경쟁 조건)를 방지합니다.
 	 */
+	@Transactional
 	public DailySummaryResult summarizeDay(String email, TimeAnalysisRequest request) {
 		User currentUser = userService.findByEmailForSummary(email);
 
@@ -110,17 +112,25 @@ public class DailySummaryService {
 				)
 		);
 
-		// 5. DB 저장 (User 정보 포함)
+		// 5. DB 저장 (upsert: 같은 날짜 데이터가 있으면 update, 없으면 insert)
 		try {
-			dailySummaryRepository.save(new DailySummary(
-					currentUser,
-					localDate,
-					objectMapper.writeValueAsString(result.topKeywords()),
-					objectMapper.writeValueAsString(result.dailyTimeline()),
-					objectMapper.writeValueAsString(result.summaryText()),
-					result.activityStats().totalUsageTimeMinutes(),
-					objectMapper.writeValueAsString(result.activityStats().activityProportions())
-			));
+			String topKeywordsJson = objectMapper.writeValueAsString(result.topKeywords());
+			String timelineJson = objectMapper.writeValueAsString(result.dailyTimeline());
+			String summaryTextJson = objectMapper.writeValueAsString(result.summaryText());
+			int totalUsageMinutes = result.activityStats().totalUsageTimeMinutes();
+			String activityProportionsJson = objectMapper.writeValueAsString(result.activityStats().activityProportions());
+
+			Optional<DailySummary> existing = dailySummaryRepository.findByUserAndDate(currentUser, localDate);
+			if (existing.isPresent()) {
+				existing.get().update(topKeywordsJson, timelineJson, summaryTextJson, totalUsageMinutes, activityProportionsJson);
+				dailySummaryRepository.save(existing.get());
+			} else {
+				dailySummaryRepository.save(new DailySummary(
+						currentUser, localDate,
+						topKeywordsJson, timelineJson, summaryTextJson,
+						totalUsageMinutes, activityProportionsJson
+				));
+			}
 		} catch (JsonProcessingException e) {
 			log.error("DB 저장용 JSON 직렬화 실패", e);
 			throw new RuntimeException("DB 저장용 JSON 직렬화 실패", e);
