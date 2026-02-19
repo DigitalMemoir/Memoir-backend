@@ -21,8 +21,9 @@ public class BookmarkService {
 
     private final UserRepository userRepository;
 
+    // findByEmailWithBookmarks 사용: interests는 불필요하므로 제외해 카르테시안 곱 방지
     public Set<String> getBookmarks(String email) {
-        User user = userRepository.findByEmailWithDetails(email)
+        User user = userRepository.findByEmailWithBookmarks(email)
                 .orElseThrow(() -> new UserNotFoundException(ErrorCode.USER_NOT_FOUND));
 
         return user.getBookmarks();
@@ -30,7 +31,7 @@ public class BookmarkService {
 
     @Transactional
     public void addBookmark(String email, BookmarkRequestDto requestDto) {
-        User user = userRepository.findByEmailWithDetails(email)
+        User user = userRepository.findByEmailWithBookmarks(email)
                 .orElseThrow(() -> new UserNotFoundException(ErrorCode.USER_NOT_FOUND));
 
         user.addBookmarkUrl(requestDto.getUrl());
@@ -38,7 +39,7 @@ public class BookmarkService {
 
     @Transactional
     public void removeBookmark(String email, BookmarkRequestDto requestDto) {
-        User user = userRepository.findByEmailWithDetails(email)
+        User user = userRepository.findByEmailWithBookmarks(email)
                 .orElseThrow(() -> new UserNotFoundException(ErrorCode.USER_NOT_FOUND));
 
         user.removeBookmarkUrl(requestDto.getUrl());
@@ -46,7 +47,7 @@ public class BookmarkService {
 
     @Transactional
     public void updateBookmark(String email, BookmarkUpdateRequestDto requestDto) {
-        User user = userRepository.findByEmailWithDetails(email)
+        User user = userRepository.findByEmailWithBookmarks(email)
                 .orElseThrow(() -> new UserNotFoundException(ErrorCode.USER_NOT_FOUND));
 
         user.removeBookmarkUrl(requestDto.getOldUrl());
