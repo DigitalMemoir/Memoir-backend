@@ -6,7 +6,7 @@
 > 
 > 📅 2025.05.16 ~ 2025.08.04 &emsp; 🚀 AI-Driven Retrospective Platform
 
-![memoir_최종_PPT_page-0001](https://github.com/user-attachments/assets/654bd0b1-82f0-4ff1-a007-51e85dd66895)
+![memoir_최종_PPT_page-0001](https://github.com/user-attachments/assets/65e669bf-ce47-43ed-bca4-70f95b91a6dd)
 
 ## 📍 주요 기능
 ### 1. 실시간 웹 활동 로그 수집 및 분석🌐
@@ -24,32 +24,33 @@
 
 
 ## 🖥️ 발표 자료
-![memoir_최종_PPT_page-0002](https://github.com/user-attachments/assets/dfca2a3b-17de-4b94-869f-e040b2f4a087)
-![memoir_최종_PPT_page-0003](https://github.com/user-attachments/assets/40f51f2e-ad1a-4282-bf4a-0c130326b9cd)
-![memoir_최종_PPT_page-0004](https://github.com/user-attachments/assets/eaf275c4-c337-4497-85d0-f0a319e56f35)
-![memoir_최종_PPT_page-0005](https://github.com/user-attachments/assets/a004833a-04d0-4828-9026-073639889608)
-![memoir_최종_PPT_page-0006](https://github.com/user-attachments/assets/38a56cd5-a803-4a00-a5c7-6740d1658888)
-![memoir_최종_PPT_page-0007](https://github.com/user-attachments/assets/3c043a71-371c-41f4-a6be-9ab8f364f5c2)
-![memoir_최종_PPT_page-0008](https://github.com/user-attachments/assets/62bc3d62-b031-4f01-83c5-9235d8c4490d)
-![memoir_최종_PPT_page-0009](https://github.com/user-attachments/assets/27574fa2-a341-4c23-ab50-a17904e83ee5)
-![memoir_최종_PPT_page-0010](https://github.com/user-attachments/assets/7b0e59e4-6128-4334-9505-d3e413a60485)
-![memoir_최종_PPT_page-0011](https://github.com/user-attachments/assets/abbede1a-c898-4e53-9472-3a76d220556e)
-![memoir_최종_PPT_page-0012](https://github.com/user-attachments/assets/a9537f2b-5d8e-4ebb-adf7-0608af28339b)
-![memoir_최종_PPT_page-0013](https://github.com/user-attachments/assets/ea76bbfc-e161-4c42-8640-a474484991b5)
-![memoir_최종_PPT_page-0014](https://github.com/user-attachments/assets/1fc05c5c-2041-4877-bacb-b2f61a238069)
-![memoir_최종_PPT_page-0015](https://github.com/user-attachments/assets/e0cdf30e-7834-43f2-8f96-747d79838880)
-![memoir_최종_PPT_page-0016](https://github.com/user-attachments/assets/0b484e3d-2488-4fff-b687-27268606dfeb)
-![memoir_최종_PPT_page-0017](https://github.com/user-attachments/assets/663a5207-8cac-4981-b381-1cd18a31a0af)
-![memoir_최종_PPT_page-0018](https://github.com/user-attachments/assets/de1748aa-0977-4a44-be3c-b9ba2dff8908)
-![memoir_최종_PPT_page-0019](https://github.com/user-attachments/assets/50d84a07-3760-437c-ab5b-2629d026bfd5)
-![memoir_최종_PPT_page-0020](https://github.com/user-attachments/assets/179d254d-459a-4cd8-bc69-1a33a61b3e6c)
-![memoir_최종_PPT_page-0021](https://github.com/user-attachments/assets/c11eb14b-3759-4686-9f7c-428153fd7ffc)
-![memoir_최종_PPT_page-0022](https://github.com/user-attachments/assets/67cfdaa7-20a0-40be-b2c5-29a464fb53a4)
-![memoir_최종_PPT_page-0023](https://github.com/user-attachments/assets/999c7658-4ab4-450a-9f7b-db3fd34ce777)
-![memoir_최종_PPT_page-0024](https://github.com/user-attachments/assets/f650d500-53a3-4d7a-ab37-29304ab8e4a3)
-![memoir_최종_PPT_page-0025](https://github.com/user-attachments/assets/bf7b01a5-7866-44d8-b3b9-519d0e4b8006)
-![memoir_최종_PPT_page-0026](https://github.com/user-attachments/assets/a1ecbac9-b5db-47af-a8f5-c540aab2a9ab)
-![memoir_최종_PPT_page-0027](https://github.com/user-attachments/assets/f4f074c4-eb3b-42bc-9803-1361ea5ae93e)
+
+![memoir_최종_PPT_page-0002](https://github.com/user-attachments/assets/4ba692b2-86c5-41da-8565-db7d2ba129a4)
+![memoir_최종_PPT_page-0003](https://github.com/user-attachments/assets/71661fb6-7e7a-430b-ad76-da3ea04ad121)
+![memoir_최종_PPT_page-0004](https://github.com/user-attachments/assets/9414a15a-c2ef-4a2c-93f2-f804831e739e)
+![memoir_최종_PPT_page-0005](https://github.com/user-attachments/assets/f0d12bfe-39a2-457d-ac56-c45cdf834b3b)
+![memoir_최종_PPT_page-0006](https://github.com/user-attachments/assets/204d37d6-2f0b-41ed-8568-f6dae54aff54)
+![memoir_최종_PPT_page-0007](https://github.com/user-attachments/assets/241a3477-7f50-4f1d-b6ac-0707aa3eabce)
+![memoir_최종_PPT_page-0008](https://github.com/user-attachments/assets/7994c24c-a1b3-44d5-8b28-d309f098093d)
+![memoir_최종_PPT_page-0009](https://github.com/user-attachments/assets/b0f45215-cbad-49fe-8468-8ceab517dfa0)
+![memoir_최종_PPT_page-0010](https://github.com/user-attachments/assets/b032ed73-ddb2-4ce6-9172-ed73d86005b2)
+![memoir_최종_PPT_page-0011](https://github.com/user-attachments/assets/2611eda0-af7e-4eff-9d51-dabf16230961)
+![memoir_최종_PPT_page-0012](https://github.com/user-attachments/assets/87f14f7b-4618-447e-84ac-591c904b6c00)
+![memoir_최종_PPT_page-0013](https://github.com/user-attachments/assets/ea14ed9d-9fd3-4e61-b104-45e02b3f61de)
+![memoir_최종_PPT_page-0014](https://github.com/user-attachments/assets/99745cbf-0a61-4175-8c5e-0405439a855e)
+![memoir_최종_PPT_page-0015](https://github.com/user-attachments/assets/d7d06db6-6a36-4310-86de-2412693de7f3)
+![memoir_최종_PPT_page-0016](https://github.com/user-attachments/assets/80cbfee4-f0da-4a73-bcb5-0d4bdc713bee)
+![memoir_최종_PPT_page-0017](https://github.com/user-attachments/assets/7c4a243c-d3f5-47e6-ad2d-b47e964e67d0)
+![memoir_최종_PPT_page-0018](https://github.com/user-attachments/assets/248083c3-f6d9-410b-a2b9-fb696d039788)
+![memoir_최종_PPT_page-0019](https://github.com/user-attachments/assets/2700ed74-9ad6-4cb1-8cb0-3b7fbcb53e93)
+![memoir_최종_PPT_page-0020](https://github.com/user-attachments/assets/c7df5227-5998-42d6-a562-c7c8090a6fdc)
+![memoir_최종_PPT_page-0021](https://github.com/user-attachments/assets/efac52b1-e472-4d43-9239-1310a915505a)
+![memoir_최종_PPT_page-0022](https://github.com/user-attachments/assets/8e4838e9-3c2a-44d6-ba5a-b6f25d426ae4)
+![memoir_최종_PPT_page-0023](https://github.com/user-attachments/assets/5dbf0c55-4736-4106-a79d-c1b210d844f3)
+![memoir_최종_PPT_page-0024](https://github.com/user-attachments/assets/ad70e241-6339-441c-bbbb-b70ee2bbbff8)
+![memoir_최종_PPT_page-0025](https://github.com/user-attachments/assets/3ae05254-3c8b-49ab-983f-5f67ad13a94f)
+![memoir_최종_PPT_page-0026](https://github.com/user-attachments/assets/0f1d2d4f-b0a6-4a69-b28a-9e94481f921a)
+![memoir_최종_PPT_page-0027](https://github.com/user-attachments/assets/6b511a66-9b27-42c0-8159-808103ff8c9e)
 
 ## 🛠️ Tech Stack
 | **Category** | **Content** |
